@@ -85,8 +85,9 @@ body {
   body {
     @apply text-foreground;
     background-color: hsl(var(--background));
-    background-image: radial-gradient(circle at top left, hsl(var(--primary) / 0.1), transparent 40%),
-                      radial-gradient(circle at bottom right, hsl(var(--accent) / 0.1), transparent 40%);
+    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1533130061792-64b345e7e835?q=80&w=1932&auto=format&fit=crop);
+    background-size: cover;
+    background-position: center;
     background-attachment: fixed;
   }
 }
