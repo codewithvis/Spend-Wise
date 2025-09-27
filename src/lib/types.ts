@@ -22,3 +22,11 @@ export interface Budget {
   category: Category;
   amount: number;
 }
+
+export interface FuturePlan {
+  id: string;
+  description: string;
+  amount: number;
+  category: Category;
+  targetDate: string; // ISO 8601 date string
+}

@@ -5,6 +5,7 @@ import {
   WalletCards,
   Target,
   FileDown,
+  CalendarCheck,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -38,6 +39,11 @@ const menuItems = [
     label: 'Budgets',
     icon: Target,
   },
+  {
+    href: '/plans',
+    label: 'Future Plans',
+    icon: CalendarCheck,
+  }
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

@@ -1,17 +1,21 @@
 'use client';
 
-import type { Expense, Budget, Category } from '@/lib/types';
+import type { Expense, Budget, Category, FuturePlan } from '@/lib/types';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface SpendWiseContextType {
   expenses: Expense[];
   budgets: Budget[];
+  futurePlans: FuturePlan[];
   addExpense: (expense: Omit<Expense, 'id'>) => void;
   editExpense: (expense: Expense) => void;
   deleteExpense: (id: string) => void;
   setBudgets: (budgets: Budget[]) => void;
   getBudgetForCategory: (category: Category) => number;
   getSpentForCategory: (category: Category) => number;
+  addFuturePlan: (plan: Omit<FuturePlan, 'id'>) => void;
+  editFuturePlan: (plan: FuturePlan) => void;
+  deleteFuturePlan: (id: string) => void;
 }
 
 const SpendWiseContext = createContext<SpendWiseContextType | undefined>(undefined);
@@ -22,14 +26,12 @@ const getInitialExpenses = (): Expense[] => {
   if (storedExpenses) {
     try {
       const parsed = JSON.parse(storedExpenses);
-      // Basic validation
       if (Array.isArray(parsed)) return parsed;
     } catch (e) {
       console.error("Failed to parse expenses from localStorage", e);
       return [];
     }
   }
-  // Dummy data for initial load
   return [
     { id: '1', description: "Trader Joe's", amount: 85.4, category: 'Groceries', date: new Date(Date.now() - 2 * 86400000).toISOString() },
     { id: '2', description: 'Monthly Rent', amount: 1500, category: 'Rent', date: new Date(Date.now() - 3 * 86400000).toISOString() },
@@ -46,7 +48,6 @@ const getInitialBudgets = (): Budget[] => {
    if (storedBudgets) {
      try {
         const parsed = JSON.parse(storedBudgets);
-        // Basic validation
         if (Array.isArray(parsed)) return parsed;
      } catch(e) {
         console.error("Failed to parse budgets from localStorage", e);
@@ -64,15 +65,36 @@ const getInitialBudgets = (): Budget[] => {
   ];
 };
 
+const getInitialFuturePlans = (): FuturePlan[] => {
+  if (typeof window === 'undefined') return [];
+  const storedPlans = localStorage.getItem('spendwise_future_plans');
+  if (storedPlans) {
+    try {
+      const parsed = JSON.parse(storedPlans);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {
+      console.error("Failed to parse future plans from localStorage", e);
+      return [];
+    }
+  }
+  return [
+      { id: '1', description: 'Vacation to Goa', amount: 25000, category: 'Travel', targetDate: new Date(Date.now() + 30 * 86400000).toISOString() },
+      { id: '2', description: 'New Phone', amount: 60000, category: 'Shopping', targetDate: new Date(Date.now() + 60 * 86400000).toISOString() },
+  ];
+};
+
+
 export function SpendWiseProvider({ children }: { children: ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budgets, setBudgetsState] = useState<Budget[]>([]);
+  const [futurePlans, setFuturePlansState] = useState<FuturePlan[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
     setExpenses(getInitialExpenses());
     setBudgetsState(getInitialBudgets());
+    setFuturePlansState(getInitialFuturePlans());
   }, []);
 
   useEffect(() => {
@@ -86,6 +108,12 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('spendwise_budgets', JSON.stringify(budgets));
     }
   }, [budgets, isMounted]);
+  
+  useEffect(() => {
+    if (isMounted) {
+      localStorage.setItem('spendwise_future_plans', JSON.stringify(futurePlans));
+    }
+  }, [futurePlans, isMounted]);
 
   const addExpense = (expense: Omit<Expense, 'id'>) => {
     const newExpense = { ...expense, id: new Date().getTime().toString() };
@@ -103,6 +131,20 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
   const setBudgets = (newBudgets: Budget[]) => {
     setBudgetsState(newBudgets);
   };
+  
+  const addFuturePlan = (plan: Omit<FuturePlan, 'id'>) => {
+    const newPlan = { ...plan, id: new Date().getTime().toString() };
+    setFuturePlansState(prev => [newPlan, ...prev].sort((a,b) => new Date(b.targetDate).getTime() - new Date(a.targetDate).getTime()));
+  };
+  
+  const editFuturePlan = (updatedPlan: FuturePlan) => {
+    setFuturePlansState(prev => prev.map(p => p.id === updatedPlan.id ? updatedPlan : p).sort((a,b) => new Date(b.targetDate).getTime() - new Date(a.targetDate).getTime()));
+  };
+  
+  const deleteFuturePlan = (id: string) => {
+    setFuturePlansState(prev => prev.filter(p => p.id !== id));
+  };
+
 
   const getBudgetForCategory = (category: Category) => {
     return budgets.find(b => b.category === category)?.amount || 0;
@@ -122,12 +164,16 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
   const value = {
     expenses,
     budgets,
+    futurePlans,
     addExpense,
     editExpense,
     deleteExpense,
     setBudgets,
     getBudgetForCategory,
     getSpentForCategory,
+    addFuturePlan,
+    editFuturePlan,
+    deleteFuturePlan,
   };
 
   return <SpendWiseContext.Provider value={value}>{children}</SpendWiseContext.Provider>;
