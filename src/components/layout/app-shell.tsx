@@ -94,23 +94,6 @@ function AppLayout({
         </SidebarContent>
         <SidebarFooter>
           <SidebarSeparator />
-          <Link href="/profile" className="block p-2 hover:bg-sidebar-accent rounded-md transition-colors">
-            <div className="flex items-center gap-2">
-              <Avatar className="h-8 w-8">
-                {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || user.email || 'User avatar'} />}
-                <AvatarFallback>
-                  <UserIcon className="h-4 w-4" />
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col text-sm overflow-hidden">
-                <span className="font-medium text-sidebar-foreground truncate">
-                  {user?.displayName || user?.email || 'Anonymous User'}
-                </span>
-                {user?.displayName && user.email && <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>}
-              </div>
-            </div>
-          </Link>
-          <SidebarSeparator />
           <SidebarMenu>
              <SidebarMenuItem>
                 <SidebarMenuButton
