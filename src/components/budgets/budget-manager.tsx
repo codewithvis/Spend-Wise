@@ -3,13 +3,15 @@
 import { useState, useEffect } from 'react';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CATEGORIES, CATEGORY_ICONS } from '@/lib/constants';
 import type { Budget, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Slider } from '@/components/ui/slider';
+
+const MAX_BUDGET = 50000; // Define a max for the slider
 
 export function BudgetManager() {
   const { budgets, setBudgets, getSpentForCategory } = useSpendWise();
@@ -24,11 +26,10 @@ export function BudgetManager() {
     setLocalBudgets(initialBudgets);
   }, [budgets]);
   
-  const handleBudgetChange = (category: Category, amount: string) => {
-    const numericAmount = parseFloat(amount);
+  const handleBudgetChange = (category: Category, amount: number) => {
     setLocalBudgets(prev => ({
       ...prev,
-      [category]: isNaN(numericAmount) ? 0 : numericAmount,
+      [category]: amount,
     }));
   };
 
@@ -66,19 +67,22 @@ export function BudgetManager() {
                   <Icon className="h-5 w-5 text-muted-foreground" />
                   <span className="font-medium">{category}</span>
                 </div>
-                <div className="flex-1 flex items-center gap-2">
-                   <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={budgetAmount || ''}
-                    onChange={(e) => handleBudgetChange(category, e.target.value)}
-                    className="text-right max-w-[120px] ml-auto"
-                  />
+                <div className="flex-1 flex items-center gap-4">
+                   <Slider
+                    value={[budgetAmount]}
+                    onValueChange={(value) => handleBudgetChange(category, value[0])}
+                    max={MAX_BUDGET}
+                    step={100}
+                    className="flex-1"
+                   />
+                   <div className="text-right min-w-[100px] font-mono text-sm">
+                     {formatCurrency(budgetAmount)}
+                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-4 pl-7">
                   <Progress value={Math.min(progress, 100)} className="flex-1 h-2" />
-                  <div className="text-xs text-muted-foreground min-w-[120px] text-right">
+                  <div className="text-xs text-muted-foreground min-w-[150px] text-right">
                     {formatCurrency(spentAmount)} / {formatCurrency(budgetAmount)}
                   </div>
               </div>
