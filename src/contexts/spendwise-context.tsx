@@ -1,9 +1,9 @@
 'use client';
 
 import type { Expense, Budget, Category, FuturePlan } from '@/lib/types';
-import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useMemo } from 'react';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import {
   setDocumentNonBlocking,
   addDocumentNonBlocking,
@@ -72,10 +72,15 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
 
   const setBudgets = (newBudgets: Omit<Budget, 'userId'>[]) => {
     if (!user) return;
+    const batch = writeBatch(firestore);
     newBudgets.forEach(budget => {
       // Use category as the ID for budgets to ensure one budget per category
       const docRef = doc(firestore, 'users', user.uid, 'budgets', budget.category);
-      setDocumentNonBlocking(docRef, { ...budget, userId: user.uid }, { merge: true });
+      batch.set(docRef, { ...budget, userId: user.uid }, { merge: true });
+    });
+    batch.commit().catch(error => {
+      console.error("Error writing batch for budgets: ", error);
+      // Optionally, handle error with a toast or other notification
     });
   };
   
