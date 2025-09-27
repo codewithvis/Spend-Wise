@@ -15,7 +15,7 @@ export interface Expense {
   userId: string;
   description: string;
   amount: number;
-  category: Category;
+  category: string;
   date: string; // ISO 8601 date string
 }
 

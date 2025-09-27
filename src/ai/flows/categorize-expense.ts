@@ -39,7 +39,7 @@ const prompt = ai.definePrompt({
 
   Expense description: {{{description}}}
 
-  Respond with a JSON object with the category and confidence fields.  The category MUST be one of the following:
+  Respond with a JSON object with the category and confidence fields.  The category MUST be one of the following, unless the description is very specific and doesn't fit. If you cannot determine a category, default to 'Other'.
   - Groceries
   - Dining
   - Transportation

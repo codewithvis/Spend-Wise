@@ -33,7 +33,7 @@ import { CATEGORIES } from '@/lib/constants';
 import type { Category, Expense } from '@/lib/types';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { getCategorySuggestion } from '@/app/actions';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { WithId } from '@/firebase';
 
@@ -45,9 +45,16 @@ const formSchema = z.object({
     .number({ invalid_type_error: 'Amount must be a number.' })
     .positive({ message: 'Amount must be positive.' }),
   date: z.date({ required_error: 'A date is required.' }),
-  category: z.enum(CATEGORIES, {
-    errorMap: () => ({ message: 'Please select a valid category.' }),
-  }),
+  category: z.string().min(1, { message: 'Please select a category.' }),
+  otherCategory: z.string().optional(),
+}).refine(data => {
+    if (data.category === 'Other') {
+        return !!data.otherCategory && data.otherCategory.length > 0;
+    }
+    return true;
+}, {
+    message: 'Please specify the category',
+    path: ['otherCategory'],
 });
 
 type ExpenseFormValues = z.infer<typeof formSchema>;
@@ -69,24 +76,43 @@ export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
       ? {
           ...expense,
           date: new Date(expense.date),
+          category: CATEGORIES.includes(expense.category as Category) ? expense.category : 'Other',
+          otherCategory: CATEGORIES.includes(expense.category as Category) ? undefined : expense.category,
         }
       : {
           description: '',
           amount: undefined,
           date: new Date(),
           category: undefined,
+          otherCategory: '',
         },
   });
 
+  const selectedCategory = form.watch('category');
+
+  useEffect(() => {
+    if (selectedCategory !== 'Other') {
+        form.setValue('otherCategory', '');
+    }
+  }, [selectedCategory, form]);
+
   async function onSubmit(values: ExpenseFormValues) {
+    const finalCategory = values.category === 'Other' ? values.otherCategory! : values.category;
+    const expenseData = {
+        description: values.description,
+        amount: values.amount,
+        date: values.date.toISOString(),
+        category: finalCategory,
+    };
+
     if (isEditMode) {
-      editExpense({ ...values, date: values.date.toISOString(), id: expense.id, userId: expense.userId });
+      editExpense({ ...expenseData, id: expense.id, userId: expense.userId });
       toast({
         title: 'Expense Updated',
         description: `Successfully updated "${values.description}".`,
       });
     } else {
-      addExpense({ ...values, date: values.date.toISOString() });
+      addExpense(expenseData);
       toast({
         title: 'Expense Added',
         description: `Successfully added "${values.description}".`,
@@ -236,6 +262,21 @@ export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
             </FormItem>
           )}
         />
+        {selectedCategory === 'Other' && (
+           <FormField
+            control={form.control}
+            name="otherCategory"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Specify Category</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g., Pet food" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <div className="flex justify-end">
           <Button type="submit">
             {isEditMode ? 'Save changes' : 'Save expense'}
