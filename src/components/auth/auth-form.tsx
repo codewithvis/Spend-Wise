@@ -19,6 +19,7 @@ import { useAuth } from '@/firebase';
 import { initiateEmailSignUp, initiateEmailSignIn, initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import type { FirebaseError } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -32,14 +33,24 @@ const signupSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.'}),
 });
 
+const resetPasswordSchema = z.object({
+  email: z.string().email({ message: 'Please enter a valid email.' }),
+});
+
 
 export function AuthForm() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'resetPassword'>('login');
   const auth = useAuth();
   const { toast } = useToast();
   
-  const form = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(isLogin ? loginSchema : signupSchema),
+  const isLogin = authMode === 'login';
+  const isSignup = authMode === 'signup';
+  const isResetPassword = authMode === 'resetPassword';
+
+  const currentSchema = isLogin ? loginSchema : isSignup ? signupSchema : resetPasswordSchema;
+
+  const form = useForm<z.infer<typeof currentSchema>>({
+    resolver: zodResolver(currentSchema),
     defaultValues: {
       email: '',
       password: '',
@@ -53,7 +64,7 @@ export function AuthForm() {
         password: '',
         name: '',
     });
-  }, [isLogin, form]);
+  }, [authMode, form]);
 
   const handleAuthError = (error: FirebaseError) => {
     let title = 'Authentication Error';
@@ -82,12 +93,32 @@ export function AuthForm() {
         description: description,
     });
   };
+  
+  const handlePasswordReset = async (data: z.infer<typeof resetPasswordSchema>) => {
+    try {
+      await sendPasswordResetEmail(auth, data.email);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: `An email has been sent to ${data.email} with instructions to reset your password.`,
+      });
+      setAuthMode('login');
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Request Failed',
+        description: 'Could not send password reset email. Please make sure the email address is correct.',
+      });
+    }
+  };
 
-  const onSubmit = (data: z.infer<typeof loginSchema>) => {
+  const onSubmit = (data: z.infer<typeof currentSchema>) => {
     if (isLogin) {
       initiateEmailSignIn(auth, data.email, data.password, handleAuthError);
-    } else {
+    } else if (isSignup) {
       initiateEmailSignUp(auth, data.email, data.password, data.name, handleAuthError);
+    } else if (isResetPassword) {
+      handlePasswordReset(data);
     }
   };
   
@@ -95,18 +126,30 @@ export function AuthForm() {
     initiateAnonymousSignIn(auth, handleAuthError);
   };
 
+  const getTitle = () => {
+    if (isLogin) return 'Welcome Back';
+    if (isSignup) return 'Create Account';
+    return 'Reset Password';
+  };
+
+  const getDescription = () => {
+    if (isLogin) return 'Sign in to access your dashboard.';
+    if (isSignup) return 'Enter your details to get started.';
+    return 'Enter your email to receive a password reset link.';
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{isLogin ? 'Welcome Back' : 'Create Account'}</CardTitle>
+        <CardTitle>{getTitle()}</CardTitle>
         <CardDescription>
-          {isLogin ? 'Sign in to access your dashboard.' : 'Enter your details to get started.'}
+          {getDescription()}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {!isLogin && (
+            {isSignup && (
               <FormField
                 control={form.control}
                 name="name"
@@ -142,48 +185,72 @@ export function AuthForm() {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="password"
-                      placeholder="Enter your password..."
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {(isLogin || isSignup) && (
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter your password..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {isLogin && (
+                <div className="text-right">
+                    <Button variant="link" size="sm" type="button" onClick={() => setAuthMode('resetPassword')} className="px-0 h-auto">
+                        Forgot Password?
+                    </Button>
+                </div>
+            )}
             
             <Button type="submit" className="w-full">
-              {isLogin ? 'Sign In' : 'Sign Up'}
+              {isLogin ? 'Sign In' : isSignup ? 'Sign Up' : 'Send Reset Link'}
             </Button>
           </form>
         </Form>
-        <div className="mt-4 text-center text-sm">
-          {isLogin ? "Don't have an account?" : 'Already have an account?'}
-          <Button variant="link" onClick={() => setIsLogin(!isLogin)} className="px-1">
-            {isLogin ? 'Sign up' : 'Sign in'}
-          </Button>
-        </div>
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
-            </span>
-          </div>
-        </div>
-        <Button variant="outline" className="w-full" onClick={handleAnonymousSignIn}>
-          Sign in Anonymously
-        </Button>
+
+        {!isResetPassword && (
+          <>
+            <div className="mt-4 text-center text-sm">
+              {isLogin ? "Don't have an account?" : 'Already have an account?'}
+              <Button variant="link" onClick={() => setAuthMode(isLogin ? 'signup' : 'login')} className="px-1">
+                {isLogin ? 'Sign up' : 'Sign in'}
+              </Button>
+            </div>
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+            <Button variant="outline" className="w-full" onClick={handleAnonymousSignIn}>
+              Sign in Anonymously
+            </Button>
+          </>
+        )}
+
+        {isResetPassword && (
+            <div className="mt-4 text-center text-sm">
+                Remember your password?
+                <Button variant="link" onClick={() => setAuthMode('login')} className="px-1">
+                    Sign in
+                </Button>
+            </div>
+        )}
       </CardContent>
     </Card>
   );
