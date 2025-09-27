@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { CATEGORIES, CATEGORY_ICONS } from '@/lib/constants';
 import type { Budget, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Slider } from '@/components/ui/slider';
+import { Separator } from '../ui/separator';
 
 const MAX_BUDGET = 50000; // Define a max for the slider
 
@@ -52,45 +53,58 @@ export function BudgetManager() {
     <Card>
       <CardHeader>
         <CardTitle>Monthly Budgets</CardTitle>
+        <CardDescription>
+            Define your budget for each category and track your spending.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {CATEGORIES.filter(cat => cat !== 'Salary').map((category) => {
+      <CardContent className="space-y-8">
+        {CATEGORIES.filter(cat => cat !== 'Salary').map((category, index) => {
           const Icon = CATEGORY_ICONS[category];
           const budgetAmount = localBudgets[category] || 0;
           const spentAmount = getSpentForCategory(category);
           const progress = budgetAmount > 0 ? (spentAmount / budgetAmount) * 100 : 0;
 
           return (
-            <div key={category} className="space-y-2">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2 min-w-[120px]">
-                  <Icon className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">{category}</span>
+            <div key={category}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    {/* Column 1: Define Budget */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                             <Icon className="h-6 w-6 text-muted-foreground" />
+                             <h3 className="text-lg font-semibold">{category}</h3>
+                        </div>
+                        <p className='text-sm text-muted-foreground'>1. Define the portion of the total amount for this section.</p>
+                        <div className="flex-1 flex items-center gap-4 pt-2">
+                           <Slider
+                            value={[budgetAmount]}
+                            onValueChange={(value) => handleBudgetChange(category, value[0])}
+                            max={MAX_BUDGET}
+                            step={100}
+                            className="flex-1"
+                           />
+                           <div className="text-right min-w-[100px] font-mono">
+                             {formatCurrency(budgetAmount)}
+                           </div>
+                        </div>
+                    </div>
+                    {/* Column 2: Manage Usage */}
+                    <div className="space-y-3">
+                        <h4 className="text-md font-semibold text-muted-foreground">Spending Status</h4>
+                        <p className='text-sm text-muted-foreground'>2. Manage how much you have used.</p>
+                         <div className="flex items-center gap-4 pt-2">
+                            <Progress value={Math.min(progress, 100)} className="flex-1 h-3" />
+                         </div>
+                         <div className="text-sm text-muted-foreground min-w-[150px] text-right">
+                           <span className='font-semibold text-foreground'>{formatCurrency(spentAmount)}</span> used of {formatCurrency(budgetAmount)}
+                         </div>
+                    </div>
                 </div>
-                <div className="flex-1 flex items-center gap-4">
-                   <Slider
-                    value={[budgetAmount]}
-                    onValueChange={(value) => handleBudgetChange(category, value[0])}
-                    max={MAX_BUDGET}
-                    step={100}
-                    className="flex-1"
-                   />
-                   <div className="text-right min-w-[100px] font-mono text-sm">
-                     {formatCurrency(budgetAmount)}
-                   </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 pl-7">
-                  <Progress value={Math.min(progress, 100)} className="flex-1 h-2" />
-                  <div className="text-xs text-muted-foreground min-w-[150px] text-right">
-                    {formatCurrency(spentAmount)} / {formatCurrency(budgetAmount)}
-                  </div>
-              </div>
+                {index < CATEGORIES.filter(c => c !== 'Salary').length - 1 && <Separator className="mt-8" />}
             </div>
           );
         })}
-        <div className="flex justify-end pt-4">
-            <Button onClick={handleSaveChanges}>Save Changes</Button>
+        <div className="flex justify-end pt-4 border-t">
+            <Button onClick={handleSaveChanges}>Save All Budgets</Button>
         </div>
       </CardContent>
     </Card>
