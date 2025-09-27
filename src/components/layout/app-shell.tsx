@@ -122,13 +122,6 @@ function AppLayout({
       <SidebarInset>
         <div
           className="min-h-screen bg-background"
-          style={{
-            backgroundImage:
-              "url('https://picsum.photos/seed/plus/1920/1080')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-          }}
-          data-ai-hint="plus abstract"
         >
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <SidebarTrigger className="sm:hidden" />
