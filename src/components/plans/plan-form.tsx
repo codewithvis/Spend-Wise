@@ -33,6 +33,7 @@ import { CATEGORIES } from '@/lib/constants';
 import type { FuturePlan } from '@/lib/types';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { useToast } from '@/hooks/use-toast';
+import { WithId } from '@/firebase';
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -51,7 +52,7 @@ type PlanFormValues = z.infer<typeof formSchema>;
 
 interface PlanFormProps {
   onFinished: () => void;
-  plan?: FuturePlan;
+  plan?: WithId<FuturePlan>;
 }
 
 export function PlanForm({ onFinished, plan }: PlanFormProps) {
@@ -76,7 +77,7 @@ export function PlanForm({ onFinished, plan }: PlanFormProps) {
 
   async function onSubmit(values: PlanFormValues) {
     if (isEditMode) {
-      editFuturePlan({ ...values, targetDate: values.targetDate.toISOString(), id: plan.id });
+      editFuturePlan({ ...values, targetDate: values.targetDate.toISOString(), id: plan.id, userId: plan.userId });
       toast({
         title: 'Plan Updated',
         description: `Successfully updated "${values.description}".`,

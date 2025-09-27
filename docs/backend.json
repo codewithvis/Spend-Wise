@@ -6,19 +6,20 @@
       "type": "object",
       "description": "Represents a user of the SpendWise application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the user."
-        },
         "email": {
           "type": "string",
           "description": "User's email address.",
           "format": "email"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date and time the user account was created."
         }
       },
       "required": [
-        "id",
-        "email"
+        "email",
+        "createdAt"
       ]
     },
     "Expense": {
@@ -27,17 +28,9 @@
       "type": "object",
       "description": "Represents an expense record.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the expense."
-        },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Expense)"
-        },
-        "categoryId": {
-          "type": "string",
-          "description": "Reference to Category. (Relationship: Category 1:N Expense)"
+          "description": "The ID of the user who owns this expense."
         },
         "amount": {
           "type": "number",
@@ -51,44 +44,79 @@
         "description": {
           "type": "string",
           "description": "Description of the expense."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the expense."
         }
       },
       "required": [
-        "id",
         "userId",
-        "categoryId",
         "amount",
-        "date"
+        "date",
+        "description",
+        "category"
       ]
     },
-    "Category": {
+    "Budget": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Category",
+      "title": "Budget",
       "type": "object",
-      "description": "Represents a category of expenses.",
+      "description": "Represents a budget for an expense category.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the category."
-        },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Category)"
+          "description": "The ID of the user who owns this budget."
         },
-        "name": {
+        "category": {
           "type": "string",
-          "description": "Name of the category."
+          "description": "The expense category for this budget."
         },
-        "budget": {
+        "amount": {
           "type": "number",
-          "description": "Monthly budget for the category."
+          "description": "The budget amount."
         }
       },
       "required": [
-        "id",
         "userId",
-        "name",
-        "budget"
+        "category",
+        "amount"
+      ]
+    },
+    "FuturePlan": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FuturePlan",
+      "type": "object",
+      "description": "Represents a planned future expenditure.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who owns this plan."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the planned expense."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The planned amount of the expense."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the planned expense."
+        },
+        "targetDate": {
+          "type": "string",
+          "description": "The target date for the expense.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "userId",
+        "description",
+        "amount",
+        "category",
+        "targetDate"
       ]
     }
   },
@@ -99,64 +127,29 @@
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles. All data is private to the user identified by `userId`.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
-        }
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
       },
-      {
-        "path": "/users/{userId}/categories/{categoryId}",
-        "definition": {
-          "entityName": "Category",
-          "schema": {
-            "$ref": "#/backend/entities/Category"
-          },
-          "description": "Stores expense categories created by each user. Path-based ownership ensures that only the user can access their categories.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "categoryId",
-              "description": "The unique identifier for the category."
-            }
-          ]
-        }
+      "description": "Stores user profile information."
+    },
+    "/users/{userId}/expenses/{expenseId}": {
+      "schema": {
+        "$ref": "#/entities/Expense"
       },
-      {
-        "path": "/users/{userId}/expenses/{expenseId}",
-        "definition": {
-          "entityName": "Expense",
-          "schema": {
-            "$ref": "#/backend/entities/Expense"
-          },
-          "description": "Stores individual expense entries for each user. `userId` on the expense document is redundant but included to strictly define ownership within security rules without querying other documents. The user can only access their own expenses.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "expenseId",
-              "description": "The unique identifier for the expense."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to store user information, expense records, and expense categories for the SpendWise application. It prioritizes authorization independence by using path-based ownership for user-specific data, eliminating the need for `get()` calls in security rules. \n\nSpecifically:\n\n*   `/users/{userId}`: Stores user profiles. All data is private to the user identified by `userId`.  This ensures sole ownership.\n*   `/users/{userId}/categories/{categoryId}`: Stores expense categories created by each user. This parent-child relationship utilizes a hierarchical path and is secured via path-based rules.\n*   `/users/{userId}/expenses/{expenseId}`: Stores individual expense entries for each user.  This maintains path-based ownership, crucial for security and scalability.  The `userId` on the expense document is redundant but included to strictly define ownership within security rules without querying other documents.\n\nThis design avoids complex authorization logic in the rules, simplifying security and improving performance."
+      "description": "Stores individual expense records for each user."
+    },
+    "/users/{userId}/budgets/{categoryId}": {
+      "schema": {
+        "$ref": "#/entities/Budget"
+      },
+      "description": "Stores budget information for each user, with one document per category."
+    },
+    "/users/{userId}/futurePlans/{planId}": {
+      "schema": {
+        "$ref": "#/entities/FuturePlan"
+      },
+      "description": "Stores future planned expenditures for each user."
+    }
   }
 }

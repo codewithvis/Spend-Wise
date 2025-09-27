@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { AppShell } from '@/components/layout/app-shell';
 import { Providers } from './providers';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'SpendWise',
@@ -28,9 +28,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <AppShell>
+        <FirebaseClientProvider>
           <Providers>{children}</Providers>
-        </AppShell>
+        </FirebaseClientProvider>
       </body>
     </html>
   );

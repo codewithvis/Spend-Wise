@@ -9,9 +9,10 @@ import {
 } from '@/components/ui/dialog';
 import { PlanForm } from './plan-form';
 import type { FuturePlan } from '@/lib/types';
+import { WithId } from '@/firebase';
 
 interface EditPlanDialogProps {
-  plan: FuturePlan;
+  plan: WithId<FuturePlan>;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }

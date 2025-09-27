@@ -10,6 +10,7 @@ import { CATEGORIES, CATEGORY_ICONS } from '@/lib/constants';
 import type { Budget, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import type { WithId } from '@/firebase';
 
 export function BudgetManager() {
   const { budgets, setBudgets, getSpentForCategory } = useSpendWise();
@@ -33,7 +34,7 @@ export function BudgetManager() {
   };
 
   const handleSaveChanges = () => {
-    const newBudgets: Budget[] = Object.entries(localBudgets)
+    const newBudgets: Omit<Budget, 'userId'>[] = Object.entries(localBudgets)
       .map(([category, amount]) => ({
         category: category as Category,
         amount: amount || 0,

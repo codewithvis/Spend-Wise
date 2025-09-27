@@ -9,9 +9,10 @@ import {
 } from '@/components/ui/dialog';
 import { ExpenseForm } from './expense-form';
 import type { Expense } from '@/lib/types';
+import { WithId } from '@/firebase';
 
 interface EditExpenseDialogProps {
-  expense: Expense;
+  expense: WithId<Expense>;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }

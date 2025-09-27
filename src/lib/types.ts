@@ -12,6 +12,7 @@ export type Category =
 
 export interface Expense {
   id: string;
+  userId: string;
   description: string;
   amount: number;
   category: Category;
@@ -19,12 +20,15 @@ export interface Expense {
 }
 
 export interface Budget {
+  // id is the category name
+  userId: string;
   category: Category;
   amount: number;
 }
 
 export interface FuturePlan {
   id: string;
+  userId: string;
   description: string;
   amount: number;
   category: Category;

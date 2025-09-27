@@ -35,6 +35,7 @@ import { useSpendWise } from '@/contexts/spendwise-context';
 import { getCategorySuggestion } from '@/app/actions';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { WithId } from '@/firebase';
 
 const formSchema = z.object({
   description: z.string().min(2, {
@@ -53,7 +54,7 @@ type ExpenseFormValues = z.infer<typeof formSchema>;
 
 interface ExpenseFormProps {
   onFinished: () => void;
-  expense?: Expense;
+  expense?: WithId<Expense>;
 }
 
 export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
@@ -79,7 +80,7 @@ export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
 
   async function onSubmit(values: ExpenseFormValues) {
     if (isEditMode) {
-      editExpense({ ...values, date: values.date.toISOString(), id: expense.id });
+      editExpense({ ...values, date: values.date.toISOString(), id: expense.id, userId: expense.userId });
       toast({
         title: 'Expense Updated',
         description: `Successfully updated "${values.description}".`,

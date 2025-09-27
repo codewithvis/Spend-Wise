@@ -1,170 +1,123 @@
 'use client';
 
 import type { Expense, Budget, Category, FuturePlan } from '@/lib/types';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import {
+  setDocumentNonBlocking,
+  addDocumentNonBlocking,
+  deleteDocumentNonBlocking,
+} from '@/firebase/non-blocking-updates';
+import type { WithId } from '@/firebase/firestore/use-collection';
 
 interface SpendWiseContextType {
-  expenses: Expense[];
-  budgets: Budget[];
-  futurePlans: FuturePlan[];
-  addExpense: (expense: Omit<Expense, 'id'>) => void;
-  editExpense: (expense: Expense) => void;
+  expenses: WithId<Expense>[];
+  budgets: WithId<Budget>[];
+  futurePlans: WithId<FuturePlan>[];
+  addExpense: (expense: Omit<Expense, 'id' | 'userId'>) => void;
+  editExpense: (expense: WithId<Expense>) => void;
   deleteExpense: (id: string) => void;
-  setBudgets: (budgets: Budget[]) => void;
+  setBudgets: (budgets: Omit<Budget, 'userId'>[]) => void;
   getBudgetForCategory: (category: Category) => number;
   getSpentForCategory: (category: Category) => number;
-  addFuturePlan: (plan: Omit<FuturePlan, 'id'>) => void;
-  editFuturePlan: (plan: FuturePlan) => void;
+  addFuturePlan: (plan: Omit<FuturePlan, 'id' | 'userId'>) => void;
+  editFuturePlan: (plan: WithId<FuturePlan>) => void;
   deleteFuturePlan: (id: string) => void;
+  isLoading: boolean;
 }
 
 const SpendWiseContext = createContext<SpendWiseContextType | undefined>(undefined);
 
-const getInitialExpenses = (): Expense[] => {
-  if (typeof window === 'undefined') return [];
-  const storedExpenses = localStorage.getItem('spendwise_expenses');
-  if (storedExpenses) {
-    try {
-      const parsed = JSON.parse(storedExpenses);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
-      console.error("Failed to parse expenses from localStorage", e);
-      return [];
-    }
-  }
-  return [
-    { id: '1', description: "Trader Joe's", amount: 85.4, category: 'Groceries', date: new Date(Date.now() - 2 * 86400000).toISOString() },
-    { id: '2', description: 'Monthly Rent', amount: 1500, category: 'Rent', date: new Date(Date.now() - 3 * 86400000).toISOString() },
-    { id: '3', description: 'Gas', amount: 45.0, category: 'Transportation', date: new Date(Date.now() - 4 * 86400000).toISOString() },
-    { id: '4', description: 'Movie Tickets', amount: 30.0, category: 'Entertainment', date: new Date(Date.now() - 5 * 86400000).toISOString() },
-    { id: '5', description: 'Paycheck', amount: 2500, category: 'Salary', date: new Date(Date.now() - 1 * 86400000).toISOString() },
-    { id: '6', description: 'Dinner with friends', amount: 75.50, category: 'Dining', date: new Date(Date.now() - 6 * 86400000).toISOString() },
-  ];
-};
-
-const getInitialBudgets = (): Budget[] => {
-  if (typeof window === 'undefined') return [];
-  const storedBudgets = localStorage.getItem('spendwise_budgets');
-   if (storedBudgets) {
-     try {
-        const parsed = JSON.parse(storedBudgets);
-        if (Array.isArray(parsed)) return parsed;
-     } catch(e) {
-        console.error("Failed to parse budgets from localStorage", e);
-        return [];
-     }
-  }
-  return [
-    { category: 'Groceries', amount: 400 },
-    { category: 'Dining', amount: 200 },
-    { category: 'Transportation', amount: 150 },
-    { category: 'Entertainment', amount: 100 },
-    { category: 'Utilities', amount: 250 },
-    { category: 'Rent', amount: 1500 },
-    { category: 'Shopping', amount: 300 },
-  ];
-};
-
-const getInitialFuturePlans = (): FuturePlan[] => {
-  if (typeof window === 'undefined') return [];
-  const storedPlans = localStorage.getItem('spendwise_future_plans');
-  if (storedPlans) {
-    try {
-      const parsed = JSON.parse(storedPlans);
-      if (Array.isArray(parsed)) return parsed;
-    } catch (e) {
-      console.error("Failed to parse future plans from localStorage", e);
-      return [];
-    }
-  }
-  return [
-      { id: '1', description: 'Vacation to Goa', amount: 25000, category: 'Travel', targetDate: new Date(Date.now() + 30 * 86400000).toISOString() },
-      { id: '2', description: 'New Phone', amount: 60000, category: 'Shopping', targetDate: new Date(Date.now() + 60 * 86400000).toISOString() },
-  ];
-};
-
-
 export function SpendWiseProvider({ children }: { children: ReactNode }) {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [budgets, setBudgetsState] = useState<Budget[]>([]);
-  const [futurePlans, setFuturePlansState] = useState<FuturePlan[]>([]);
-  const [isMounted, setIsMounted] = useState(false);
+  const { user } = useUser();
+  const firestore = useFirestore();
 
-  useEffect(() => {
-    setIsMounted(true);
-    setExpenses(getInitialExpenses());
-    setBudgetsState(getInitialBudgets());
-    setFuturePlansState(getInitialFuturePlans());
-  }, []);
+  const expensesQuery = useMemoFirebase(() => 
+    user ? collection(firestore, 'users', user.uid, 'expenses') : null
+  , [firestore, user]);
+  const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem('spendwise_expenses', JSON.stringify(expenses));
-    }
-  }, [expenses, isMounted]);
+  const budgetsQuery = useMemoFirebase(() =>
+    user ? collection(firestore, 'users', user.uid, 'budgets') : null
+  , [firestore, user]);
+  const { data: budgets, isLoading: budgetsLoading } = useCollection<Budget>(budgetsQuery);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem('spendwise_budgets', JSON.stringify(budgets));
-    }
-  }, [budgets, isMounted]);
-  
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem('spendwise_future_plans', JSON.stringify(futurePlans));
-    }
-  }, [futurePlans, isMounted]);
+  const futurePlansQuery = useMemoFirebase(() =>
+    user ? collection(firestore, 'users', user.uid, 'futurePlans') : null
+  , [firestore, user]);
+  const { data: futurePlans, isLoading: futurePlansLoading } = useCollection<FuturePlan>(futurePlansQuery);
 
-  const addExpense = (expense: Omit<Expense, 'id'>) => {
-    const newExpense = { ...expense, id: new Date().getTime().toString() };
-    setExpenses(prev => [newExpense, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  const sortedExpenses = useMemo(() => expenses ? [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [], [expenses]);
+  const sortedFuturePlans = useMemo(() => futurePlans ? [...futurePlans].sort((a,b) => new Date(b.targetDate).getTime() - new Date(a.targetDate).getTime()): [], [futurePlans]);
+
+  const addExpense = (expense: Omit<Expense, 'id' | 'userId'>) => {
+    if (!user || !expensesQuery) return;
+    const newExpense = { ...expense, userId: user.uid };
+    addDocumentNonBlocking(expensesQuery, newExpense);
   };
 
-  const editExpense = (updatedExpense: Expense) => {
-    setExpenses(prev => prev.map(e => e.id === updatedExpense.id ? updatedExpense : e).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  const editExpense = (updatedExpense: WithId<Expense>) => {
+    if (!user) return;
+    const { id, ...expenseData } = updatedExpense;
+    const docRef = doc(firestore, 'users', user.uid, 'expenses', id);
+    setDocumentNonBlocking(docRef, expenseData, { merge: true });
   }
 
   const deleteExpense = (id: string) => {
-    setExpenses(prev => prev.filter(e => e.id !== id));
+    if (!user) return;
+    const docRef = doc(firestore, 'users', user.uid, 'expenses', id);
+    deleteDocumentNonBlocking(docRef);
   }
 
-  const setBudgets = (newBudgets: Budget[]) => {
-    setBudgetsState(newBudgets);
+  const setBudgets = (newBudgets: Omit<Budget, 'userId'>[]) => {
+    if (!user) return;
+    newBudgets.forEach(budget => {
+      // Use category as the ID for budgets to ensure one budget per category
+      const docRef = doc(firestore, 'users', user.uid, 'budgets', budget.category);
+      setDocumentNonBlocking(docRef, { ...budget, userId: user.uid }, { merge: true });
+    });
   };
   
-  const addFuturePlan = (plan: Omit<FuturePlan, 'id'>) => {
-    const newPlan = { ...plan, id: new Date().getTime().toString() };
-    setFuturePlansState(prev => [newPlan, ...prev].sort((a,b) => new Date(b.targetDate).getTime() - new Date(a.targetDate).getTime()));
+  const addFuturePlan = (plan: Omit<FuturePlan, 'id' | 'userId'>) => {
+    if (!user || !futurePlansQuery) return;
+    const newPlan = { ...plan, userId: user.uid };
+    addDocumentNonBlocking(futurePlansQuery, newPlan);
   };
   
-  const editFuturePlan = (updatedPlan: FuturePlan) => {
-    setFuturePlansState(prev => prev.map(p => p.id === updatedPlan.id ? updatedPlan : p).sort((a,b) => new Date(b.targetDate).getTime() - new Date(a.targetDate).getTime()));
+  const editFuturePlan = (updatedPlan: WithId<FuturePlan>) => {
+    if (!user) return;
+    const { id, ...planData } = updatedPlan;
+    const docRef = doc(firestore, 'users', user.uid, 'futurePlans', id);
+    setDocumentNonBlocking(docRef, planData, { merge: true });
   };
   
   const deleteFuturePlan = (id: string) => {
-    setFuturePlansState(prev => prev.filter(p => p.id !== id));
+    if (!user) return;
+    const docRef = doc(firestore, 'users', user.uid, 'futurePlans', id);
+    deleteDocumentNonBlocking(docRef);
   };
 
-
   const getBudgetForCategory = (category: Category) => {
-    return budgets.find(b => b.category === category)?.amount || 0;
+    return budgets?.find(b => b.category === category)?.amount || 0;
   };
   
   const getSpentForCategory = (category: Category) => {
     const now = new Date();
     return expenses
-      .filter(e => {
+      ?.filter(e => {
         const expenseDate = new Date(e.date);
         return e.category === category && e.amount > 0 && expenseDate.getMonth() === now.getMonth() && expenseDate.getFullYear() === now.getFullYear();
       })
-      .reduce((sum, e) => sum + e.amount, 0);
+      .reduce((sum, e) => sum + e.amount, 0) || 0;
   };
 
+  const isLoading = expensesLoading || budgetsLoading || futurePlansLoading;
 
   const value = {
-    expenses,
-    budgets,
-    futurePlans,
+    expenses: sortedExpenses,
+    budgets: budgets || [],
+    futurePlans: sortedFuturePlans,
     addExpense,
     editExpense,
     deleteExpense,
@@ -174,6 +127,7 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     addFuturePlan,
     editFuturePlan,
     deleteFuturePlan,
+    isLoading,
   };
 
   return <SpendWiseContext.Provider value={value}>{children}</SpendWiseContext.Provider>;
