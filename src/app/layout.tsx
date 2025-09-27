@@ -28,9 +28,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <Providers>
-          <AppShell>{children}</AppShell>
-        </Providers>
+        <AppShell>
+          <Providers>{children}</Providers>
+        </AppShell>
       </body>
     </html>
   );
