@@ -23,10 +23,10 @@ import {
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Logo } from '@/components/common/logo';
-import { Button } from '../ui/button';
 import { useAuth, useUser } from '@/firebase';
 import { useEffect } from 'react';
 import { Skeleton } from '../ui/skeleton';
+import { SpendWiseProvider } from '@/contexts/spendwise-context';
 
 const menuItems = [
   {
@@ -51,40 +51,16 @@ const menuItems = [
   }
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, isUserLoading } = useUser();
   const auth = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/login');
-    }
-  }, [user, isUserLoading, router]);
-
-  if (isUserLoading || !user) {
-    return (
-       <div className="flex h-screen w-full items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-8 w-8" />
-          <Skeleton className="h-6 w-24" />
-        </div>
-      </div>
-    )
-  }
-
+  
   const handleSignOut = async () => {
     await auth.signOut();
   };
-  
-  if (pathname === '/login') {
-    return <>{children}</>;
-  }
-
 
   return (
-    <SidebarProvider>
+     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
           <Logo />
@@ -125,5 +101,52 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <main className="bg-background/80 backdrop-blur-sm">{children}</main>
       </SidebarInset>
     </SidebarProvider>
+  )
+}
+
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user && pathname !== '/login') {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router, pathname]);
+
+  if (isUserLoading) {
+    return (
+       <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-6 w-24" />
+        </div>
+      </div>
+    )
+  }
+  
+  if (pathname === '/login') {
+    return <>{children}</>;
+  }
+
+  if(!user) {
+    // This can happen briefly while the redirect is in flight.
+    return (
+       <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-6 w-24" />
+        </div>
+      </div>
+    )
+  }
+
+
+  return (
+    <SpendWiseProvider>
+      <AppLayout>{children}</AppLayout>
+    </SpendWiseProvider>
   );
 }
