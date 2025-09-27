@@ -6,7 +6,6 @@ import { Button, type ButtonProps } from '@/components/ui/button';
 import { Loader2, Upload } from 'lucide-react';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { useToast } from '@/hooks/use-toast';
-import Papa from 'papaparse';
 import { CATEGORIES } from '@/lib/constants';
 import type { Expense } from '@/lib/types';
 import { getExpensesFromText, parsePdf } from '@/app/actions';
@@ -101,6 +100,7 @@ export function ImportExpensesButton({ variant = 'outline', ...props }: ButtonPr
     setIsImporting(true);
 
     if (file.type === 'text/csv') {
+        const Papa = (await import('papaparse')).default;
         Papa.parse<CsvData>(file, {
             header: true,
             skipEmptyLines: true,
