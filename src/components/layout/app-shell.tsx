@@ -38,11 +38,6 @@ const menuItems = [
     icon: LayoutDashboard,
   },
   {
-    href: '/expenses',
-    label: 'Expenses',
-    icon: WalletCards,
-  },
-  {
     href: '/budgets',
     label: 'Budgets',
     icon: Target,

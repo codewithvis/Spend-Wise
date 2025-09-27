@@ -3,7 +3,6 @@
 import { OverviewCards } from '@/components/dashboard/overview-cards';
 import { RecentExpenses } from '@/components/dashboard/recent-expenses';
 import { SpendingPieChart } from '@/components/dashboard/spending-pie-chart';
-import { AddExpenseButton } from '@/components/expenses/add-expense-button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSpendWise } from '@/contexts/spendwise-context';
 
@@ -15,7 +14,6 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 md:space-x-2">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <div className="flex items-center space-x-2">
-          <AddExpenseButton />
         </div>
       </div>
 
@@ -24,7 +22,6 @@ export default function Dashboard() {
           <div className="text-center p-4">
             <h3 className="text-2xl font-bold tracking-tight">No expenses yet</h3>
             <p className="text-sm text-muted-foreground mb-4">Add your first expense to see your dashboard.</p>
-            <AddExpenseButton variant="default" />
           </div>
         </div>
       ) : (
