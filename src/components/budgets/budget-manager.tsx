@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,10 +10,8 @@ import { CATEGORIES, CATEGORY_ICONS } from '@/lib/constants';
 import type { Budget, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { Separator } from '../ui/separator';
-
-const MAX_BUDGET = 50000; // Define a max for the slider
 
 export function BudgetManager() {
   const { budgets, setBudgets, getSpentForCategory } = useSpendWise();
@@ -75,11 +74,11 @@ export function BudgetManager() {
                         </div>
                         <p className='text-sm text-muted-foreground'>1. Define the portion of the total amount for this section.</p>
                         <div className="flex-1 flex items-center gap-4 pt-2">
-                           <Slider
-                            value={[budgetAmount]}
-                            onValueChange={(value) => handleBudgetChange(category, value[0])}
-                            max={MAX_BUDGET}
-                            step={100}
+                           <Input
+                            type="number"
+                            value={budgetAmount}
+                            onChange={(e) => handleBudgetChange(category, Number(e.target.value))}
+                            placeholder="Enter budget amount"
                             className="flex-1"
                            />
                            <div className="text-right min-w-[100px] font-mono">
