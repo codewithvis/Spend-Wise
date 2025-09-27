@@ -2,7 +2,7 @@
 
 import { OverviewCards } from '@/components/dashboard/overview-cards';
 import { RecentExpenses } from '@/components/dashboard/recent-expenses';
-import { SpendingPieChart } from '@/components/dashboard/spending-pie-chart';
+import { DailySpendingChart } from '@/components/dashboard/daily-spending-chart';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSpendWise } from '@/contexts/spendwise-context';
 
@@ -32,10 +32,10 @@ export default function Dashboard() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className="col-span-12 lg:col-span-4">
               <CardHeader>
-                <CardTitle>Spending by Category</CardTitle>
+                <CardTitle>Daily Spending (Current Month)</CardTitle>
               </CardHeader>
               <CardContent className="pl-2">
-                <SpendingPieChart />
+                <DailySpendingChart />
               </CardContent>
             </Card>
             <Card className="col-span-12 lg:col-span-3">
