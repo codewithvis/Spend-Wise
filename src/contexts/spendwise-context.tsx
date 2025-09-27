@@ -48,8 +48,15 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
   , [firestore, user]);
   const { data: futurePlans, isLoading: futurePlansLoading } = useCollection<FuturePlan>(futurePlansQuery);
 
-  const sortedExpenses = useMemo(() => expenses ? [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : [], [expenses]);
-  const sortedFuturePlans = useMemo(() => futurePlans ? [...futurePlans].sort((a,b) => new Date(b.targetDate).getTime() - new Date(a.targetDate).getTime()): [], [futurePlans]);
+  const sortedExpenses = useMemo(() => {
+    if (!expenses) return [];
+    return [...expenses].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [expenses]);
+
+  const sortedFuturePlans = useMemo(() => {
+    if (!futurePlans) return [];
+    return [...futurePlans].sort((a, b) => new Date(b.targetDate).getTime() - new Date(a.targetDate).getTime());
+  }, [futurePlans]);
 
   const addExpense = (expense: Omit<Expense, 'id' | 'userId'>) => {
     if (!user || !expensesQuery) return;
