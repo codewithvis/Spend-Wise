@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/firebase';
 import { initiateEmailSignUp, initiateEmailSignIn, initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import type { FirebaseError } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
@@ -34,6 +36,7 @@ const signupSchema = z.object({
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const auth = useAuth();
+  const { toast } = useToast();
   
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(isLogin ? loginSchema : signupSchema),
@@ -52,16 +55,44 @@ export function AuthForm() {
     });
   }, [isLogin, form]);
 
+  const handleAuthError = (error: FirebaseError) => {
+    let title = 'Authentication Error';
+    let description = 'An unexpected error occurred. Please try again.';
+
+    switch (error.code) {
+        case 'auth/email-already-in-use':
+            title = 'Sign-up Failed';
+            description = 'This email is already registered. Please try signing in.';
+            break;
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            title = 'Sign-in Failed';
+            description = 'Invalid email or password. Please check your credentials.';
+            break;
+        case 'auth/weak-password':
+            title = 'Sign-up Failed';
+            description = 'The password is too weak. It must be at least 6 characters long.';
+            break;
+    }
+
+    toast({
+        variant: 'destructive',
+        title: title,
+        description: description,
+    });
+  };
+
   const onSubmit = (data: z.infer<typeof loginSchema>) => {
     if (isLogin) {
-      initiateEmailSignIn(auth, data.email, data.password);
+      initiateEmailSignIn(auth, data.email, data.password, handleAuthError);
     } else {
-      initiateEmailSignUp(auth, data.email, data.password, data.name);
+      initiateEmailSignUp(auth, data.email, data.password, data.name, handleAuthError);
     }
   };
   
   const handleAnonymousSignIn = () => {
-    initiateAnonymousSignIn(auth);
+    initiateAnonymousSignIn(auth, handleAuthError);
   };
 
   return (
