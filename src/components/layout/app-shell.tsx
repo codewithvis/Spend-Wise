@@ -6,6 +6,7 @@ import {
   Target,
   CalendarCheck,
   LogOut,
+  User as UserIcon,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -27,6 +28,8 @@ import { useAuth, useUser } from '@/firebase';
 import { useEffect } from 'react';
 import { Skeleton } from '../ui/skeleton';
 import { SpendWiseProvider } from '@/contexts/spendwise-context';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import type { User } from 'firebase/auth';
 
 const menuItems = [
   {
@@ -48,19 +51,25 @@ const menuItems = [
     href: '/plans',
     label: 'Future Plans',
     icon: CalendarCheck,
-  }
+  },
 ];
 
-function AppLayout({ children }: { children: React.ReactNode }) {
+function AppLayout({
+  children,
+  user,
+}: {
+  children: React.ReactNode;
+  user: User | null;
+}) {
   const pathname = usePathname();
   const auth = useAuth();
-  
+
   const handleSignOut = async () => {
     await auth.signOut();
   };
 
   return (
-     <SidebarProvider>
+    <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
           <Logo />
@@ -85,32 +94,53 @@ function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarContent>
         <SidebarFooter>
           <SidebarSeparator />
-           <SidebarMenu>
-             <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleSignOut} tooltip="Sign Out">
-                  <LogOut />
-                  <span>Sign Out</span>
-                </SidebarMenuButton>
-             </SidebarMenuItem>
-           </SidebarMenu>
+          <div className="flex items-center gap-2 p-2">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback>
+                <UserIcon className="h-4 w-4" />
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col text-sm overflow-hidden">
+              <span className="font-medium text-sidebar-foreground truncate">
+                {user?.email || 'Anonymous User'}
+              </span>
+            </div>
+          </div>
+          <SidebarSeparator />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={handleSignOut} tooltip="Sign Out">
+                <LogOut />
+                <span>Sign Out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <div className="min-h-screen bg-background" style={{backgroundImage: "url('https://picsum.photos/seed/beams/1920/1080')", backgroundSize: 'cover', backgroundPosition: 'center'}} data-ai-hint="beams abstract">
+        <div
+          className="min-h-screen bg-background"
+          style={{
+            backgroundImage:
+              "url('https://picsum.photos/seed/beams/1920/1080')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+          data-ai-hint="beams abstract"
+        >
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <SidebarTrigger className="sm:hidden" />
           </header>
           <main className="p-4 sm:p-6 lg:p-8">
             <div className="mx-auto max-w-screen-2xl rounded-lg border bg-background/80 backdrop-blur-sm">
-                {children}
+              {children}
             </div>
           </main>
         </div>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }
-
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -125,35 +155,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (isUserLoading) {
     return (
-       <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8" />
           <Skeleton className="h-6 w-24" />
         </div>
       </div>
-    )
+    );
   }
-  
+
   if (pathname === '/login') {
     return <>{children}</>;
   }
 
-  if(!user) {
+  if (!user) {
     // This can happen briefly while the redirect is in flight.
     return (
-       <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center">
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-8" />
           <Skeleton className="h-6 w-24" />
         </div>
       </div>
-    )
+    );
   }
-
 
   return (
     <SpendWiseProvider>
-      <AppLayout>{children}</AppLayout>
+      <AppLayout user={user}>{children}</AppLayout>
     </SpendWiseProvider>
   );
 }
