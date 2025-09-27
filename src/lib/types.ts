@@ -24,6 +24,7 @@ export interface Budget {
   userId: string;
   category: Category;
   amount: number;
+  spent?: number;
 }
 
 export interface FuturePlan {

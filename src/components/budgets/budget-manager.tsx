@@ -13,33 +13,47 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Separator } from '../ui/separator';
 
+type LocalBudgets = Partial<Record<Category, { amount: number; spent: number }>>;
+
 export function BudgetManager() {
   const { budgets, setBudgets, getSpentForCategory } = useSpendWise();
-  const [localBudgets, setLocalBudgets] = useState<Partial<Record<Category, number>>>({});
+  const [localBudgets, setLocalBudgets] = useState<LocalBudgets>({});
   const { toast } = useToast();
 
   useEffect(() => {
-    const initialBudgets = budgets.reduce((acc, budget) => {
-      acc[budget.category] = budget.amount;
-      return acc;
-    }, {} as Partial<Record<Category, number>>);
+    const initialBudgets = CATEGORIES.reduce((acc, category) => {
+        if (category === 'Salary') return acc;
+        
+        const budget = budgets.find(b => b.category === category);
+        const autoSpent = getSpentForCategory(category);
+
+        acc[category] = {
+            amount: budget?.amount || 0,
+            spent: budget?.spent ?? autoSpent, // Use stored spent, fallback to auto-calculated
+        };
+        return acc;
+    }, {} as LocalBudgets);
+
     setLocalBudgets(initialBudgets);
-  }, [budgets]);
+  }, [budgets, getSpentForCategory]);
   
-  const handleBudgetChange = (category: Category, amount: number) => {
+  const handleBudgetChange = (category: Category, field: 'amount' | 'spent', value: number) => {
     setLocalBudgets(prev => ({
       ...prev,
-      [category]: amount,
+      [category]: {
+        ...(prev[category] || { amount: 0, spent: 0 }),
+        [field]: value,
+      },
     }));
   };
 
   const handleSaveChanges = () => {
     const newBudgets: Omit<Budget, 'userId'>[] = Object.entries(localBudgets)
-      .map(([category, amount]) => ({
+      .map(([category, values]) => ({
         category: category as Category,
-        amount: amount || 0,
-      }))
-      .filter(b => b.amount > 0);
+        amount: values.amount || 0,
+        spent: values.spent || 0,
+      }));
       
     setBudgets(newBudgets);
     toast({
@@ -59,8 +73,8 @@ export function BudgetManager() {
       <CardContent className="space-y-8">
         {CATEGORIES.filter(cat => cat !== 'Salary').map((category, index) => {
           const Icon = CATEGORY_ICONS[category];
-          const budgetAmount = localBudgets[category] || 0;
-          const spentAmount = getSpentForCategory(category);
+          const budgetAmount = localBudgets[category]?.amount || 0;
+          const spentAmount = localBudgets[category]?.spent || 0;
           const progress = budgetAmount > 0 ? (spentAmount / budgetAmount) * 100 : 0;
 
           return (
@@ -77,7 +91,7 @@ export function BudgetManager() {
                            <Input
                             type="number"
                             value={budgetAmount}
-                            onChange={(e) => handleBudgetChange(category, Number(e.target.value))}
+                            onChange={(e) => handleBudgetChange(category, 'amount', Number(e.target.value))}
                             placeholder="Enter budget amount"
                             className="flex-1"
                            />
@@ -90,6 +104,18 @@ export function BudgetManager() {
                     <div className="space-y-3">
                         <h4 className="text-md font-semibold text-muted-foreground">Spending Status</h4>
                         <p className='text-sm text-muted-foreground'>2. Manage how much you have used.</p>
+                         <div className="flex-1 flex items-center gap-4 pt-2">
+                            <Input
+                                type="number"
+                                value={spentAmount}
+                                onChange={(e) => handleBudgetChange(category, 'spent', Number(e.target.value))}
+                                placeholder="Enter amount spent"
+                                className="flex-1"
+                            />
+                            <div className="text-right min-w-[100px] font-mono">
+                                {formatCurrency(spentAmount)}
+                            </div>
+                         </div>
                          <div className="flex items-center gap-4 pt-2">
                             <Progress value={Math.min(progress, 100)} className="flex-1 h-3" />
                          </div>

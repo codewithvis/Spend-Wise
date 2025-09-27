@@ -1,7 +1,7 @@
 'use client';
 
 import type { Expense, Budget, Category, FuturePlan } from '@/lib/types';
-import { createContext, useContext, ReactNode, useMemo } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import {
@@ -110,19 +110,27 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     deleteDocumentNonBlocking(docRef);
   };
 
-  const getBudgetForCategory = (category: Category) => {
+  const getBudgetForCategory = useCallback((category: Category) => {
     return budgets?.find(b => b.category === category)?.amount || 0;
-  };
+  }, [budgets]);
   
-  const getSpentForCategory = (category: Category) => {
+  const getSpentForCategory = useCallback((category: Category) => {
     const now = new Date();
+    const budget = budgets?.find(b => b.category === category);
+
+    // If a 'spent' amount is manually set on the budget, use it.
+    if (budget && typeof budget.spent === 'number') {
+      return budget.spent;
+    }
+    
+    // Otherwise, calculate from expenses.
     return expenses
       ?.filter(e => {
         const expenseDate = new Date(e.date);
         return e.category === category && e.amount > 0 && expenseDate.getMonth() === now.getMonth() && expenseDate.getFullYear() === now.getFullYear();
       })
       .reduce((sum, e) => sum + e.amount, 0) || 0;
-  };
+  }, [expenses, budgets]);
 
   const isLoading = expensesLoading || budgetsLoading || futurePlansLoading;
 

@@ -79,6 +79,10 @@
         "amount": {
           "type": "number",
           "description": "The budget amount."
+        },
+        "spent": {
+          "type": "number",
+          "description": "The amount spent for this budget period."
         }
       },
       "required": [
