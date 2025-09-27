@@ -26,7 +26,6 @@ export default function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success'>('idle');
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   
@@ -124,9 +123,9 @@ export default function ProfilePage() {
   const getSaveButtonContent = () => {
     switch (saveState) {
       case 'saving':
-        return <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>;
+        return <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving</>;
       case 'success':
-        return <><Check className="mr-2 h-4 w-4" /> Saved!</>;
+        return <><Check className="mr-2 h-4 w-4" /> Saved</>;
       default:
         return <><Save className="mr-2 h-4 w-4" /> Save</>;
     }
@@ -170,10 +169,10 @@ export default function ProfilePage() {
              <div className="flex justify-center gap-2">
                 {isEditing ? (
                   <>
-                    <Button onClick={handleSave} disabled={saveState !== 'idle'} className={saveState === 'success' ? 'bg-green-600' : ''}>
+                    <Button onClick={handleSave} disabled={saveState !== 'idle'} className={saveState === 'success' ? 'bg-green-600 hover:bg-green-700' : ''}>
                       {getSaveButtonContent()}
                     </Button>
-                    <Button variant="outline" onClick={() => { setIsEditing(false); setDisplayName(user?.displayName || 'Anonymous User')}} disabled={saveState !== 'idle'}>
+                    <Button variant="ghost" onClick={() => { setIsEditing(false); setDisplayName(user?.displayName || 'Anonymous User')}} disabled={saveState !== 'idle'}>
                         <X className="mr-2 h-4 w-4" />
                         Cancel
                     </Button>
