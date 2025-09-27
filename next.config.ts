@@ -39,12 +39,9 @@ const nextConfig: NextConfig = {
             "path": false,
             "os": false,
         };
+        // On the client, we want to alias pdf-parse to false to avoid bundling it.
+        config.resolve.alias['pdf-parse'] = false;
     }
-    // See https://webpack.js.org/configuration/resolve/#resolvealias
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'pdf-parse': false,
-    };
     return config
   },
 };

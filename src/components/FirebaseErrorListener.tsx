@@ -30,13 +30,10 @@ export function FirebaseErrorListener() {
     };
   }, []);
 
-  // On re-render, if an error exists in state, log it for developers
-  // but do not throw it to the user. This prevents showing backend data.
+  // On re-render, if an error exists in state, throw it.
+  // This will be caught by the Next.js error boundary and displayed in the dev overlay.
   if (error) {
-    console.error("A Firestore permission error occurred:", error);
-    // We are intentionally not re-throwing the error to the UI.
-    // Reset the error state to prevent re-logging on subsequent renders.
-    setError(null);
+    throw error;
   }
 
   // This component renders nothing.
