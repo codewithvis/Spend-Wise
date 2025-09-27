@@ -2,7 +2,9 @@
 
 import { categorizeExpense } from '@/ai/flows/categorize-expense';
 import type { CategorizeExpenseOutput } from '@/ai/flows/categorize-expense';
-import { Category } from '@/lib/types';
+import { extractExpensesFromText } from '@/ai/flows/extract-expenses';
+import type { ExtractExpensesOutput } from '@/ai/flows/extract-expenses';
+import { Category, type Expense } from '@/lib/types';
 import { CATEGORIES } from '@/lib/constants';
 
 type SuggestionResult = {
@@ -17,7 +19,6 @@ export async function getCategorySuggestion(description: string): Promise<{ data
   try {
     const result: CategorizeExpenseOutput = await categorizeExpense({ description });
     
-    // Validate if the returned category is one of the allowed ones.
     const isValidCategory = CATEGORIES.includes(result.category as Category);
 
     if (isValidCategory) {
@@ -26,7 +27,6 @@ export async function getCategorySuggestion(description: string): Promise<{ data
         confidence: result.confidence
       }, error: null };
     } else {
-      // If the AI returns an invalid category, default to 'Other'
       return { data: { category: 'Other', confidence: result.confidence }, error: `AI suggested an invalid category: "${result.category}". Defaulting to "Other".` };
     }
     
@@ -34,4 +34,31 @@ export async function getCategorySuggestion(description: string): Promise<{ data
     console.error(e);
     return { data: null, error: 'Failed to get category suggestion due to a server error.' };
   }
+}
+
+export async function getExpensesFromText(text: string): Promise<{ data: Omit<Expense, 'id' | 'userId'>[] | null; error: string | null }> {
+    if (!text?.trim()) {
+        return { data: null, error: 'Input text cannot be empty.' };
+    }
+    try {
+        const result: ExtractExpensesOutput = await extractExpensesFromText({ text });
+        
+        const validExpenses = result.expenses.map(exp => ({
+            ...exp,
+            date: new Date(exp.date).toISOString(), // Ensure date is in ISO format
+        }));
+
+        return { data: validExpenses, error: null };
+
+    } catch (e) {
+        console.error(e);
+        return { data: null, error: 'Failed to extract expenses due to a server error.' };
+    }
+}
+
+// This is a new action required for pdf-parse to work on the server
+export async function parsePdf(fileBuffer: Buffer) {
+  const pdf = (await import('pdf-parse')).default;
+  const data = await pdf(fileBuffer);
+  return data.text;
 }

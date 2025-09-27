@@ -1,15 +1,17 @@
 
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Button, type ButtonProps } from '@/components/ui/button';
-import { Upload } from 'lucide-react';
+import { Loader2, Upload } from 'lucide-react';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { useToast } from '@/hooks/use-toast';
 import Papa from 'papaparse';
 import { CATEGORIES } from '@/lib/constants';
+import type { Expense } from '@/lib/types';
+import { getExpensesFromText, parsePdf } from '@/app/actions';
 
-// Expected headers: Date,Description,Amount,Category
+// Expected CSV headers: Date,Description,Amount,Category
 interface CsvData {
     Date: string;
     Description: string;
@@ -21,71 +23,138 @@ export function ImportExpensesButton({ variant = 'outline', ...props }: ButtonPr
   const { addExpense } = useSpendWise();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const processExpenses = (expenses: Omit<Expense, 'id' | 'userId'>[]) => {
+      let importedCount = 0;
+      let errorCount = 0;
+
+      expenses.forEach((expense, index) => {
+          const { date, description, amount, category } = expense;
+          
+          if (!date || !description || !amount || !category) {
+              console.warn(`Skipping expense index ${index}: Missing required fields.`, expense);
+              errorCount++;
+              return;
+          }
+
+          if (typeof amount !== 'number' || isNaN(amount)) {
+              console.warn(`Skipping expense index ${index}: Invalid amount.`, expense);
+              errorCount++;
+              return;
+          }
+
+          const parsedDate = new Date(date);
+          if (isNaN(parsedDate.getTime())) {
+              console.warn(`Skipping expense index ${index}: Invalid date.`, expense);
+              errorCount++;
+              return;
+          }
+
+          if (!CATEGORIES.includes(category as any)) {
+              console.warn(`Skipping expense index ${index}: Invalid category.`, expense);
+              errorCount++;
+              return;
+          }
+
+          addExpense({
+              date: parsedDate.toISOString(),
+              description: description,
+              amount: amount,
+              category: category,
+          });
+          importedCount++;
+      });
+      
+      return { importedCount, errorCount };
+  }
+
+  const handleAiImport = async (text: string) => {
+    setIsImporting(true);
+    const { data, error } = await getExpensesFromText(text);
+
+    if (error || !data) {
+        toast({
+            variant: "destructive",
+            title: "AI Import Failed",
+            description: error || "The AI could not extract any expenses from the file.",
+        });
+        setIsImporting(false);
+        return;
+    }
+
+    const { importedCount, errorCount } = processExpenses(data);
+
+    toast({
+        title: "AI Import Complete",
+        description: `${importedCount} expenses imported. ${errorCount > 0 ? `${errorCount} were skipped.` : ''}`,
+    });
+    setIsImporting(false);
+  }
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) {
       return;
     }
+    
+    setIsImporting(true);
 
-    Papa.parse<CsvData>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        let importedCount = 0;
-        let errorCount = 0;
+    if (file.type === 'text/csv') {
+        Papa.parse<CsvData>(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                const expensesToProcess = results.data.map(row => ({
+                    date: row.Date,
+                    description: row.Description,
+                    amount: parseFloat(row.Amount),
+                    category: row.Category,
+                }));
+                const { importedCount, errorCount } = processExpenses(expensesToProcess as any);
 
-        results.data.forEach((row, index) => {
-            const { Date: date, Description, Amount, Category } = row;
-            
-            if (!date || !Description || !Amount || !Category) {
-                console.warn(`Skipping row ${index + 2}: Missing required fields.`, row);
-                errorCount++;
-                return;
+                toast({
+                    title: "CSV Import Complete",
+                    description: `${importedCount} expenses imported. ${errorCount > 0 ? `${errorCount} rows had errors.` : ''}`,
+                });
+                setIsImporting(false);
+            },
+            error: (error) => {
+                toast({
+                    variant: "destructive",
+                    title: "Import Failed",
+                    description: `Error parsing CSV: ${error.message}`,
+                });
+                setIsImporting(false);
             }
-
-            const amount = parseFloat(Amount);
-            if (isNaN(amount)) {
-                console.warn(`Skipping row ${index + 2}: Invalid amount.`, row);
-                errorCount++;
-                return;
-            }
-
-            const parsedDate = new Date(date);
-            if (isNaN(parsedDate.getTime())) {
-                console.warn(`Skipping row ${index + 2}: Invalid date.`, row);
-                errorCount++;
-                return;
-            }
-
-            if (!CATEGORIES.includes(Category as any)) {
-                console.warn(`Skipping row ${index + 2}: Invalid category.`, row);
-                errorCount++;
-                return;
-            }
-
-            addExpense({
-                date: parsedDate.toISOString(),
-                description: Description,
-                amount: amount,
-                category: Category,
+        });
+    } else if (file.type === 'text/plain') {
+        const text = await file.text();
+        await handleAiImport(text);
+    } else if (file.type === 'application/pdf') {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const text = await parsePdf(buffer);
+            await handleAiImport(text);
+        } catch (error) {
+            console.error("PDF parsing error", error);
+            toast({
+                variant: 'destructive',
+                title: 'PDF Import Failed',
+                description: 'Could not extract text from the PDF file.',
             });
-            importedCount++;
-        });
-
-        toast({
-            title: "Import Complete",
-            description: `${importedCount} expenses imported successfully. ${errorCount > 0 ? `${errorCount} rows had errors and were skipped.` : ''}`,
-        });
-      },
-      error: (error) => {
+            setIsImporting(false);
+        }
+    } else {
         toast({
             variant: "destructive",
-            title: "Import Failed",
-            description: `There was an error parsing the CSV file: ${error.message}`,
+            title: "Unsupported File Type",
+            description: "Please upload a .csv, .txt, or .pdf file.",
         });
-      }
-    });
+        setIsImporting(false);
+    }
+
 
     // Reset file input
     if(fileInputRef.current) {
@@ -104,10 +173,15 @@ export function ImportExpensesButton({ variant = 'outline', ...props }: ButtonPr
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".csv"
+        accept=".csv,.txt,.pdf"
+        disabled={isImporting}
       />
-      <Button variant={variant} onClick={handleButtonClick} {...props}>
-        <Upload className="mr-2 h-4 w-4" />
+      <Button variant={variant} onClick={handleButtonClick} {...props} disabled={isImporting}>
+        {isImporting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        ) : (
+            <Upload className="mr-2 h-4 w-4" />
+        )}
         Import
       </Button>
     </>

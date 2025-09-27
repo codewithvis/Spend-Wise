@@ -30,6 +30,23 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, { isServer }) => {
+    // This is required to make pdf-parse work with Next.js
+    if (!isServer) {
+        config.resolve.fallback = {
+            ...config.resolve.fallback,
+            "fs": false,
+            "path": false,
+            "os": false,
+        };
+    }
+    // See https://webpack.js.org/configuration/resolve/#resolvealias
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'pdf-parse': false,
+    };
+    return config
+  },
 };
 
 export default nextConfig;
