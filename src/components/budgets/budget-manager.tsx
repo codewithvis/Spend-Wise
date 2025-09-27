@@ -13,7 +13,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Separator } from '../ui/separator';
 
-type LocalBudgets = Partial<Record<Category, { amount: number; spent: number }>>;
+type LocalBudgetValues = { amount: number; spent: number };
+type LocalBudgets = Partial<Record<Category, LocalBudgetValues>>;
 
 export function BudgetManager() {
   const { budgets, setBudgets, getSpentForCategory } = useSpendWise();
@@ -29,7 +30,7 @@ export function BudgetManager() {
 
         acc[category] = {
             amount: budget?.amount || 0,
-            spent: budget?.spent ?? autoSpent, // Use stored spent, fallback to auto-calculated
+            spent: budget?.spent ?? autoSpent,
         };
         return acc;
     }, {} as LocalBudgets);
@@ -37,12 +38,15 @@ export function BudgetManager() {
     setLocalBudgets(initialBudgets);
   }, [budgets, getSpentForCategory]);
   
-  const handleBudgetChange = (category: Category, field: 'amount' | 'spent', value: number) => {
+  const handleBudgetChange = (category: Category, field: keyof LocalBudgetValues, value: string) => {
+    const numericValue = value === '' ? 0 : parseFloat(value);
+    if (isNaN(numericValue)) return;
+    
     setLocalBudgets(prev => ({
       ...prev,
       [category]: {
         ...(prev[category] || { amount: 0, spent: 0 }),
-        [field]: value,
+        [field]: numericValue,
       },
     }));
   };
@@ -61,6 +65,10 @@ export function BudgetManager() {
         description: "Your new budget goals have been saved.",
     });
   };
+
+  const getInputValue = (value: number) => {
+    return value === 0 ? '' : String(value);
+  }
 
   return (
     <Card>
@@ -90,8 +98,8 @@ export function BudgetManager() {
                         <div className="flex-1 flex items-center gap-4 pt-2">
                            <Input
                             type="number"
-                            value={budgetAmount}
-                            onChange={(e) => handleBudgetChange(category, 'amount', Number(e.target.value))}
+                            value={getInputValue(budgetAmount)}
+                            onChange={(e) => handleBudgetChange(category, 'amount', e.target.value)}
                             placeholder="Enter budget amount"
                             className="flex-1"
                            />
@@ -107,8 +115,8 @@ export function BudgetManager() {
                          <div className="flex-1 flex items-center gap-4 pt-2">
                             <Input
                                 type="number"
-                                value={spentAmount}
-                                onChange={(e) => handleBudgetChange(category, 'spent', Number(e.target.value))}
+                                value={getInputValue(spentAmount)}
+                                onChange={(e) => handleBudgetChange(category, 'spent', e.target.value)}
                                 placeholder="Enter amount spent"
                                 className="flex-1"
                             />
