@@ -4,30 +4,37 @@ import { BudgetManager } from '@/components/budgets/budget-manager';
 import { Button } from '@/components/ui/button';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { formatCurrency } from '@/lib/utils';
+
 
 const handleExport = (budgets) => {
-  const headers = ['Category', 'Budgeted Amount', 'Amount Spent'];
-  const csvRows = [headers.join(',')];
+  const doc = new jsPDF();
+  doc.text("SpendWise Budgets", 14, 16);
 
-  budgets.forEach((budget) => {
-    const row = [
+  const tableColumn = ["Category", "Budgeted Amount", "Amount Spent", "Remaining"];
+  const tableRows = [];
+
+  budgets.forEach(budget => {
+    const remaining = budget.amount - (budget.spent || 0);
+    const budgetData = [
       budget.category,
-      budget.amount,
-      budget.spent || 0,
-    ].join(',');
-    csvRows.push(row);
+      formatCurrency(budget.amount),
+      formatCurrency(budget.spent || 0),
+      formatCurrency(remaining)
+    ];
+    tableRows.push(budgetData);
   });
 
-  const csvString = csvRows.join('\n');
-  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.setAttribute('hidden', '');
-  a.setAttribute('href', url);
-  a.setAttribute('download', 'spendwise_budgets.csv');
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  doc.autoTable({
+    head: [tableColumn],
+    body: tableRows,
+    startY: 20,
+    headStyles: { fillColor: [22, 163, 74] },
+  });
+
+  doc.save('spendwise_budgets.pdf');
 };
 
 export default function BudgetsPage() {

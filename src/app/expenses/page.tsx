@@ -5,31 +5,36 @@ import { ExpensesDataTable } from '@/components/expenses/expenses-data-table';
 import { Button } from '@/components/ui/button';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { FileDown } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { formatCurrency } from '@/lib/utils';
+
 
 const handleExport = (expenses) => {
-  const headers = ['Date', 'Description', 'Category', 'Amount'];
-  const csvRows = [headers.join(',')];
-  
+  const doc = new jsPDF();
+  doc.text("SpendWise Expenses", 14, 16);
+
+  const tableColumn = ["Date", "Description", "Category", "Amount"];
+  const tableRows = [];
+
   expenses.forEach(expense => {
-    const row = [
+    const expenseData = [
       new Date(expense.date).toLocaleDateString(),
-      `"${expense.description.replace(/"/g, '""')}"`,
+      expense.description,
       expense.category,
-      expense.amount,
-    ].join(',');
-    csvRows.push(row);
+      formatCurrency(expense.amount),
+    ];
+    tableRows.push(expenseData);
   });
-  
-  const csvString = csvRows.join('\n');
-  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.setAttribute('hidden', '');
-  a.setAttribute('href', url);
-  a.setAttribute('download', 'spendwise_expenses.csv');
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+
+  doc.autoTable({
+    head: [tableColumn],
+    body: tableRows,
+    startY: 20,
+    headStyles: { fillColor: [22, 163, 74] }, // Example color: green
+  });
+
+  doc.save('spendwise_expenses.pdf');
 };
 
 
