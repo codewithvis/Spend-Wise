@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { User as UserIcon, Pencil, Save, X, Loader2, KeyRound, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { updateProfile, sendPasswordResetEmail, deleteUser } from 'firebase/auth';
@@ -14,10 +14,13 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Separator } from '@/components/ui/separator';
+import { doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -44,6 +47,15 @@ export default function ProfilePage() {
         setIsSaving(true);
         try {
             await updateProfile(auth.currentUser, { displayName: displayName.trim() });
+            
+            // Also update the user document in Firestore
+            const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
+            const userData = {
+                displayName: displayName.trim(),
+                email: auth.currentUser.email
+            };
+            setDocumentNonBlocking(userDocRef, userData, { merge: true });
+
             toast({
                 title: 'Profile Updated',
                 description: 'Your name has been successfully updated.',

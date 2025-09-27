@@ -6,8 +6,8 @@ import {
   signInWithEmailAndPassword,
   updateProfile,
   FirebaseError,
-  // Assume getAuth and app are initialized elsewhere
 } from 'firebase/auth';
+import { createUserDocument } from '@/firebase/user-actions';
 
 /** Initiate anonymous sign-in (non-blocking). */
 export function initiateAnonymousSignIn(authInstance: Auth, onError: (error: FirebaseError) => void): void {
@@ -24,6 +24,8 @@ export function initiateEmailSignUp(authInstance: Auth, email: string, password:
         if (displayName && userCredential.user) {
             updateProfile(userCredential.user, { displayName });
         }
+        // Create user document in Firestore
+        createUserDocument(userCredential.user);
     })
     .catch((error: FirebaseError) => {
       onError(error);
