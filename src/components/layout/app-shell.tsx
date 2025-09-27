@@ -95,7 +95,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
            </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="bg-cover bg-center" style={{backgroundImage: "url('https://picsum.photos/seed/abstract-art/1920/1080')"}} data-ai-hint="abstract art">
+      <SidebarInset className="bg-cover bg-center" style={{backgroundImage: "url('https://picsum.photos/seed/geometric-pattern/1920/1080')"}} data-ai-hint="geometric pattern">
         <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
           <SidebarTrigger className="sm:hidden" />
         </header>
