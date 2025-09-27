@@ -4,22 +4,39 @@ import { AuthForm } from '@/components/auth/auth-form';
 import { Logo } from '@/components/common/logo';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/');
+    if (!isUserLoading && user && !isRedirecting) {
+      setIsRedirecting(true);
+      setTimeout(() => {
+        router.push('/');
+      }, 3000);
     }
-  }, [user, isUserLoading, router]);
+  }, [user, isUserLoading, router, isRedirecting]);
 
-  if (isUserLoading || user) {
+  if (isUserLoading || isRedirecting) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
-        <Logo />
+        <div className="animate-pulse">
+            <Logo />
+        </div>
+      </div>
+    );
+  }
+  
+  // If user is already logged in but not redirecting yet (e.g. page refresh), show splash
+  if (user) {
+     return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="animate-pulse">
+            <Logo />
+        </div>
       </div>
     );
   }
