@@ -30,7 +30,7 @@ import { CalendarIcon, Wand2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { CATEGORIES } from '@/lib/constants';
-import type { Category } from '@/lib/types';
+import type { Category, Expense } from '@/lib/types';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { getCategorySuggestion } from '@/app/actions';
 import { useState } from 'react';
@@ -51,27 +51,46 @@ const formSchema = z.object({
 
 type ExpenseFormValues = z.infer<typeof formSchema>;
 
-export function ExpenseForm({ onFinished }: { onFinished: () => void }) {
-  const { addExpense } = useSpendWise();
+interface ExpenseFormProps {
+  onFinished: () => void;
+  expense?: Expense;
+}
+
+export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
+  const { addExpense, editExpense } = useSpendWise();
   const { toast } = useToast();
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const isEditMode = !!expense;
 
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      description: '',
-      amount: undefined,
-      date: new Date(),
-      category: undefined,
-    },
+    defaultValues: isEditMode
+      ? {
+          ...expense,
+          date: new Date(expense.date),
+        }
+      : {
+          description: '',
+          amount: undefined,
+          date: new Date(),
+          category: undefined,
+        },
   });
 
   async function onSubmit(values: ExpenseFormValues) {
-    addExpense({ ...values, date: values.date.toISOString() });
-    toast({
-      title: 'Expense Added',
-      description: `Successfully added "${values.description}".`,
-    });
+    if (isEditMode) {
+      editExpense({ ...values, date: values.date.toISOString(), id: expense.id });
+      toast({
+        title: 'Expense Updated',
+        description: `Successfully updated "${values.description}".`,
+      });
+    } else {
+      addExpense({ ...values, date: values.date.toISOString() });
+      toast({
+        title: 'Expense Added',
+        description: `Successfully added "${values.description}".`,
+      });
+    }
     onFinished();
   }
 
@@ -216,7 +235,9 @@ export function ExpenseForm({ onFinished }: { onFinished: () => void }) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">Save expense</Button>
+        <Button type="submit" className="w-full">
+          {isEditMode ? 'Save changes' : 'Save expense'}
+        </Button>
       </form>
     </Form>
   );

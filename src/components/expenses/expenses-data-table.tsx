@@ -10,6 +10,7 @@ import {
   SortingState,
   ColumnFiltersState,
   getFilteredRowModel,
+  Row,
 } from '@tanstack/react-table';
 
 import {
@@ -25,8 +26,62 @@ import { Input } from '@/components/ui/input';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { Expense } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { EditExpenseDialog } from './edit-expense-dialog';
+import { DeleteExpenseAlert } from './delete-expense-alert';
+
+const ActionsCell = ({ row }: { row: Row<Expense> }) => {
+  const expense = row.original;
+  const [isEditDialogOpen, setIsEditDialogOpen] = React.useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+
+  return (
+    <>
+      <EditExpenseDialog
+        expense={expense}
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+      />
+      <DeleteExpenseAlert
+        expenseId={expense.id}
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+};
 
 export const columns: ColumnDef<Expense>[] = [
   {
@@ -75,11 +130,15 @@ export const columns: ColumnDef<Expense>[] = [
       return <div className={`text-right font-medium ${isIncome ? 'text-green-500' : ''}`}>{isIncome ? `+${formatted}` : formatted}</div>;
     },
   },
+  {
+    id: 'actions',
+    cell: ActionsCell,
+  },
 ];
 
 export function ExpensesDataTable() {
   const { expenses } = useSpendWise();
-  const [sorting, setSorting] = React.useState<SortingState>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([['date', 'desc']]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
 
   const table = useReactTable({

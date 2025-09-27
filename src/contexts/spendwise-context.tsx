@@ -7,6 +7,8 @@ interface SpendWiseContextType {
   expenses: Expense[];
   budgets: Budget[];
   addExpense: (expense: Omit<Expense, 'id'>) => void;
+  editExpense: (expense: Expense) => void;
+  deleteExpense: (id: string) => void;
   setBudgets: (budgets: Budget[]) => void;
   getBudgetForCategory: (category: Category) => number;
   getSpentForCategory: (category: Category) => number;
@@ -18,7 +20,14 @@ const getInitialExpenses = (): Expense[] => {
   if (typeof window === 'undefined') return [];
   const storedExpenses = localStorage.getItem('spendwise_expenses');
   if (storedExpenses) {
-    return JSON.parse(storedExpenses);
+    try {
+      const parsed = JSON.parse(storedExpenses);
+      // Basic validation
+      if (Array.isArray(parsed)) return parsed;
+    } catch (e) {
+      console.error("Failed to parse expenses from localStorage", e);
+      return [];
+    }
   }
   // Dummy data for initial load
   return [
@@ -35,7 +44,14 @@ const getInitialBudgets = (): Budget[] => {
   if (typeof window === 'undefined') return [];
   const storedBudgets = localStorage.getItem('spendwise_budgets');
    if (storedBudgets) {
-    return JSON.parse(storedBudgets);
+     try {
+        const parsed = JSON.parse(storedBudgets);
+        // Basic validation
+        if (Array.isArray(parsed)) return parsed;
+     } catch(e) {
+        console.error("Failed to parse budgets from localStorage", e);
+        return [];
+     }
   }
   return [
     { category: 'Groceries', amount: 400 },
@@ -49,8 +65,8 @@ const getInitialBudgets = (): Budget[] => {
 };
 
 export function SpendWiseProvider({ children }: { children: ReactNode }) {
-  const [expenses, setExpenses] = useState<Expense[]>(getInitialExpenses);
-  const [budgets, setBudgetsState] = useState<Budget[]>(getInitialBudgets);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [budgets, setBudgetsState] = useState<Budget[]>([]);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -73,8 +89,16 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
 
   const addExpense = (expense: Omit<Expense, 'id'>) => {
     const newExpense = { ...expense, id: new Date().getTime().toString() };
-    setExpenses(prev => [newExpense, ...prev]);
+    setExpenses(prev => [newExpense, ...prev].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
+
+  const editExpense = (updatedExpense: Expense) => {
+    setExpenses(prev => prev.map(e => e.id === updatedExpense.id ? updatedExpense : e).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  }
+
+  const deleteExpense = (id: string) => {
+    setExpenses(prev => prev.filter(e => e.id !== id));
+  }
 
   const setBudgets = (newBudgets: Budget[]) => {
     setBudgetsState(newBudgets);
@@ -99,6 +123,8 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     expenses,
     budgets,
     addExpense,
+    editExpense,
+    deleteExpense,
     setBudgets,
     getBudgetForCategory,
     getSpentForCategory,
