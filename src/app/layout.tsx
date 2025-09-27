@@ -22,8 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("dark", fontInter.variable)}>
-      <head />
-      <body className="font-body antialiased" suppressHydrationWarning>
+      <body>
         <FirebaseClientProvider>
           <Providers>{children}</Providers>
         </FirebaseClientProvider>
