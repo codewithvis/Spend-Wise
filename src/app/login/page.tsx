@@ -16,14 +16,14 @@ export default function LoginPage() {
       setIsRedirecting(true);
       setTimeout(() => {
         router.push('/');
-      }, 3000);
+      }, 2000);
     }
   }, [user, isUserLoading, router, isRedirecting]);
 
   if (isUserLoading || isRedirecting) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
-        <div className="animate-pulse">
+        <div className="animate-pulse transform scale-150">
             <Logo />
         </div>
       </div>
@@ -34,7 +34,7 @@ export default function LoginPage() {
   if (user) {
      return (
       <div className="flex h-screen w-full items-center justify-center">
-        <div className="animate-pulse">
+        <div className="animate-pulse transform scale-150">
             <Logo />
         </div>
       </div>
