@@ -34,7 +34,7 @@ export function RecentExpenses() {
               </p>
             </div>
             <div className={`ml-auto font-medium ${isIncome ? 'text-green-500' : ''}`}>
-              {isIncome ? `+${formatCurrency(Math.abs(expense.amount))}` : formatCurrency(expense.amount)}
+              {isIncome ? `+${formatCurrency(expense.amount)}` : formatCurrency(expense.amount)}
             </div>
           </div>
         );

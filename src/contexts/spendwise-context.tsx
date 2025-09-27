@@ -35,7 +35,7 @@ const getInitialExpenses = (): Expense[] => {
     { id: '2', description: 'Monthly Rent', amount: 1500, category: 'Rent', date: new Date(Date.now() - 3 * 86400000).toISOString() },
     { id: '3', description: 'Gas', amount: 45.0, category: 'Transportation', date: new Date(Date.now() - 4 * 86400000).toISOString() },
     { id: '4', description: 'Movie Tickets', amount: 30.0, category: 'Entertainment', date: new Date(Date.now() - 5 * 86400000).toISOString() },
-    { id: '5', description: 'Paycheck', amount: -2500, category: 'Salary', date: new Date(Date.now() - 1 * 86400000).toISOString() },
+    { id: '5', description: 'Paycheck', amount: 2500, category: 'Salary', date: new Date(Date.now() - 1 * 86400000).toISOString() },
     { id: '6', description: 'Dinner with friends', amount: 75.50, category: 'Dining', date: new Date(Date.now() - 6 * 86400000).toISOString() },
   ];
 };
