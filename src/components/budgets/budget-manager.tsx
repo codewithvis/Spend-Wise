@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { CATEGORIES, CATEGORY_ICONS } from '@/lib/constants';
 import type { Budget, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
@@ -83,7 +82,7 @@ export function BudgetManager() {
           const Icon = CATEGORY_ICONS[category];
           const budgetAmount = localBudgets[category]?.amount || 0;
           const spentAmount = localBudgets[category]?.spent || 0;
-          const progress = budgetAmount > 0 ? (spentAmount / budgetAmount) * 100 : 0;
+          const remainingAmount = budgetAmount - spentAmount;
 
           return (
             <div key={category}>
@@ -124,11 +123,8 @@ export function BudgetManager() {
                                 {formatCurrency(spentAmount)}
                             </div>
                          </div>
-                         <div className="flex items-center gap-4 pt-2">
-                            <Progress value={Math.min(progress, 100)} className="flex-1 h-3" />
-                         </div>
-                         <div className="text-sm text-muted-foreground min-w-[150px] text-right">
-                           <span className='font-semibold text-foreground'>{formatCurrency(spentAmount)}</span> used of {formatCurrency(budgetAmount)}
+                         <div className="text-sm text-muted-foreground min-w-[150px] text-right pt-2">
+                           <span className={`font-semibold ${remainingAmount < 0 ? 'text-destructive' : 'text-foreground'}`}>{formatCurrency(remainingAmount)}</span> left
                          </div>
                     </div>
                 </div>
