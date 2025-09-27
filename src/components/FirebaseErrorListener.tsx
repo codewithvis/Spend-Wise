@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -29,9 +30,13 @@ export function FirebaseErrorListener() {
     };
   }, []);
 
-  // On re-render, if an error exists in state, throw it.
+  // On re-render, if an error exists in state, log it for developers
+  // but do not throw it to the user. This prevents showing backend data.
   if (error) {
-    throw error;
+    console.error("A Firestore permission error occurred:", error);
+    // We are intentionally not re-throwing the error to the UI.
+    // Reset the error state to prevent re-logging on subsequent renders.
+    setError(null);
   }
 
   // This component renders nothing.
