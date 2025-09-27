@@ -1,0 +1,111 @@
+/**
+ * @fileoverview Firestore Security Rules for SpendWise.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model. Each user has full control over their own data (profile, categories, and expenses), and no access to other users' data.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profiles, with `userId` matching the authenticated user's UID.
+ * - /users/{userId}/categories/{categoryId}: Stores expense categories belonging to a specific user.
+ * - /users/{userId}/expenses/{expenseId}: Stores individual expense entries for each user.
+ *
+ * Key Security Decisions:
+ * - Users can only read and write their own data.
+ * - Data consistency between the path and the document's internal fields is enforced on create and update.
+ * - Listing other users' data is disallowed.
+ *
+ * Denormalization for Authorization:
+ * The `userId` is included both in the path and within the `Expense` and `Category` documents. This redundancy simplifies security rules by avoiding the need for `get()` calls to verify ownership.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (create) - User can create their own profile if the userId matches their auth UID.
+     * @allow (get, update, delete) - User can get, update, and delete their own profile if the userId matches their auth UID.
+     * @deny (create) - User cannot create a profile with a userId that does not match their auth UID.
+     * @deny (get, update, delete) - User cannot get, update, or delete another user's profile.
+     * @principle Enforces document ownership: only the user with the matching UID can access their profile.
+     */
+    match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to expense category documents within a user's collection.
+     * @path /users/{userId}/categories/{categoryId}
+     * @allow (create) - User can create a category under their userId if the category's userId matches the path.
+     * @allow (get, list, update, delete) - User can get, list, update, and delete their own categories if the userId matches their auth UID.
+     * @deny (create) - User cannot create a category under a userId that does not match their auth UID.
+     * @deny (get, list, update, delete) - User cannot get, list, update, or delete another user's categories.
+     * @principle Enforces document ownership via path and ensures that only the owner can manage their categories.
+     */
+    match /users/{userId}/categories/{categoryId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to expense documents within a user's collection.
+     * @path /users/{userId}/expenses/{expenseId}
+     * @allow (create) - User can create an expense under their userId if the expense's userId matches the path.
+     * @allow (get, list, update, delete) - User can get, list, update, and delete their own expenses if the userId matches their auth UID.
+     * @deny (create) - User cannot create an expense under a userId that does not match their auth UID.
+     * @deny (get, list, update, delete) - User cannot get, list, update, or delete another user's expenses.
+     * @principle Enforces document ownership via path and the expense's userId field to ensure that only the owner can manage their expenses.
+     */
+    match /users/{userId}/expenses/{expenseId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}
