@@ -1,18 +1,19 @@
-
 'use client';
 
 import { useUser } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Pencil, Save, X, Loader2 } from 'lucide-react';
+import { User as UserIcon, Pencil, Save, X, Loader2, KeyRound, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { updateProfile } from 'firebase/auth';
+import { updateProfile, sendPasswordResetEmail, deleteUser } from 'firebase/auth';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Separator } from '@/components/ui/separator';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useUser();
@@ -23,6 +24,9 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  
+  const isEmailProvider = auth.currentUser?.providerData.some(p => p.providerId === 'password');
 
   useEffect(() => {
     if (user) {
@@ -58,13 +62,53 @@ export default function ProfilePage() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (user?.email) {
+      try {
+        await sendPasswordResetEmail(auth, user.email);
+        toast({
+          title: 'Password Reset Email Sent',
+          description: `An email has been sent to ${user.email} with instructions to reset your password.`,
+        });
+      } catch (error) {
+        console.error('Error sending password reset email:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Request Failed',
+          description: 'Could not send password reset email. Please try again later.',
+        });
+      }
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (auth.currentUser) {
+      try {
+        await deleteUser(auth.currentUser);
+        toast({
+          title: 'Account Deleted',
+          description: 'Your account has been permanently deleted.',
+        });
+        // The onAuthStateChanged listener in AppShell will handle the redirect to /login
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Deletion Failed',
+          description: 'There was an error deleting your account. Please sign out and sign back in to try again.',
+        });
+      }
+    }
+  };
+
+
   const userInitial = user?.displayName?.[0] ?? user?.email?.[0];
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <h2 className="text-3xl font-bold tracking-tight">Profile</h2>
       <div className="flex justify-center">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-lg">
           <CardHeader className="items-center text-center">
             {isUserLoading ? (
               <Skeleton className="h-24 w-24 rounded-full" />
@@ -126,6 +170,47 @@ export default function ProfilePage() {
                     <p className="text-sm font-medium text-muted-foreground">Last Sign In</p>
                     {isUserLoading ? <Skeleton className="h-5 w-1/2" /> : <p className="text-sm">{user?.metadata.lastSignInTime ? new Date(user.metadata.lastSignInTime).toLocaleString() : 'N/A'}</p>}
                 </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                    <h3 className="font-semibold">Account Management</h3>
+                    <div className='flex flex-col sm:flex-row gap-2'>
+                        <Button variant="outline" onClick={handlePasswordReset} disabled={!isEmailProvider}>
+                            <KeyRound className='mr-2 h-4 w-4'/>
+                            Reset Password
+                        </Button>
+                        
+                        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive">
+                                    <ShieldAlert className="mr-2 h-4 w-4" />
+                                    Delete Account
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete your account and all associated data from our servers.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive hover:bg-destructive/90">
+                                    Delete My Account
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                     {!isEmailProvider && (
+                        <p className="text-xs text-muted-foreground pt-1">
+                            Password reset is only available for accounts created with email and password.
+                        </p>
+                    )}
+                </div>
+
                 <div className="pt-4">
                     <Button variant="outline" className="w-full" onClick={handleSignOut}>Sign Out</Button>
                 </div>
