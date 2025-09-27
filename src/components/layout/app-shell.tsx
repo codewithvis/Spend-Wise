@@ -28,7 +28,6 @@ import { useAuth, useUser } from '@/firebase';
 import { useEffect } from 'react';
 import { Skeleton } from '../ui/skeleton';
 import { SpendWiseProvider } from '@/contexts/spendwise-context';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import type { User } from 'firebase/auth';
 
 const menuItems = [
@@ -118,7 +117,7 @@ function AppLayout({
       </Sidebar>
       <SidebarInset>
         <div
-          className="min-h-screen bg-background"
+          className="min-h-screen"
         >
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <SidebarTrigger className="sm:hidden" />
