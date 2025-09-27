@@ -4,7 +4,7 @@ import { useUser } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Pencil, Save, X, Loader2, KeyRound, ShieldAlert } from 'lucide-react';
+import { User as UserIcon, Pencil, Save, X, Loader2, KeyRound, ShieldAlert, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
@@ -27,6 +27,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'success'>('idle');
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   
   const isEmailProvider = auth.currentUser?.providerData.some(p => p.providerId === 'password');
@@ -44,7 +45,7 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     if (auth.currentUser && firestore && displayName.trim()) {
-        setIsSaving(true);
+        setSaveState('saving');
         try {
             await updateProfile(auth.currentUser, { displayName: displayName.trim() });
             
@@ -56,11 +57,16 @@ export default function ProfilePage() {
             };
             setDocumentNonBlocking(userDocRef, userData, { merge: true });
 
-            toast({
-                title: 'Profile Updated',
-                description: 'Your name has been successfully updated.',
-            });
-            setIsEditing(false);
+            setSaveState('success');
+            setTimeout(() => {
+              setIsEditing(false);
+              setSaveState('idle');
+              toast({
+                  title: 'Profile Updated',
+                  description: 'Your name has been successfully updated.',
+              });
+            }, 1500);
+
         } catch (error) {
             console.error("Error updating profile: ", error);
             toast({
@@ -68,8 +74,7 @@ export default function ProfilePage() {
                 title: 'Update Failed',
                 description: 'There was an error updating your profile.',
             });
-        } finally {
-            setIsSaving(false);
+            setSaveState('idle');
         }
     }
   };
@@ -116,6 +121,17 @@ export default function ProfilePage() {
 
   const userInitial = user?.displayName?.[0] ?? user?.email?.[0];
 
+  const getSaveButtonContent = () => {
+    switch (saveState) {
+      case 'saving':
+        return <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>;
+      case 'success':
+        return <><Check className="mr-2 h-4 w-4" /> Saved!</>;
+      default:
+        return <><Save className="mr-2 h-4 w-4" /> Save</>;
+    }
+  };
+
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       <h2 className="text-3xl font-bold tracking-tight">Profile</h2>
@@ -139,6 +155,7 @@ export default function ProfilePage() {
                     value={displayName} 
                     onChange={(e) => setDisplayName(e.target.value)}
                     className="text-2xl font-semibold text-center h-auto p-0 border-0 focus-visible:ring-0"
+                    disabled={saveState !== 'idle'}
                   />
                 ) : (
                   <span>{displayName}</span>
@@ -153,11 +170,10 @@ export default function ProfilePage() {
              <div className="flex justify-center gap-2">
                 {isEditing ? (
                   <>
-                    <Button onClick={handleSave} disabled={isSaving}>
-                      {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                      Save
+                    <Button onClick={handleSave} disabled={saveState !== 'idle'} className={saveState === 'success' ? 'bg-green-600' : ''}>
+                      {getSaveButtonContent()}
                     </Button>
-                    <Button variant="outline" onClick={() => { setIsEditing(false); setDisplayName(user?.displayName || 'Anonymous User')}}>
+                    <Button variant="outline" onClick={() => { setIsEditing(false); setDisplayName(user?.displayName || 'Anonymous User')}} disabled={saveState !== 'idle'}>
                         <X className="mr-2 h-4 w-4" />
                         Cancel
                     </Button>
