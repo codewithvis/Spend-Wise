@@ -185,9 +185,11 @@ export function PlanForm({ onFinished, plan }: PlanFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          {isEditMode ? 'Save changes' : 'Save plan'}
-        </Button>
+        <div className="flex justify-end">
+          <Button type="submit">
+            {isEditMode ? 'Save changes' : 'Save plan'}
+          </Button>
+        </div>
       </form>
     </Form>
   );

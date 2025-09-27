@@ -236,9 +236,11 @@ export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          {isEditMode ? 'Save changes' : 'Save expense'}
-        </Button>
+        <div className="flex justify-end">
+          <Button type="submit">
+            {isEditMode ? 'Save changes' : 'Save expense'}
+          </Button>
+        </div>
       </form>
     </Form>
   );

@@ -147,9 +147,8 @@ export default function ProfilePage() {
                 </AvatarFallback>
               </Avatar>
             )}
-            <CardTitle className="mt-4 flex items-center gap-2">
-              {isUserLoading ? <Skeleton className="h-8 w-48" /> : (
-                isEditing ? (
+            <div className="flex items-center gap-2 mt-4">
+               {isEditing ? (
                   <Input 
                     value={displayName} 
                     onChange={(e) => setDisplayName(e.target.value)}
@@ -157,33 +156,30 @@ export default function ProfilePage() {
                     disabled={saveState !== 'idle'}
                   />
                 ) : (
-                  <span>{displayName}</span>
-                )
-              )}
-            </CardTitle>
+                  <CardTitle>{displayName}</CardTitle>
+                )}
+                {!isEditing && (
+                    <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} className="h-7 w-7 rounded-full">
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                )}
+            </div>
             <CardDescription>
               {isUserLoading ? <Skeleton className="h-4 w-56 mt-1" /> : (user?.email || 'No email provided')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-             <div className="flex justify-center gap-2">
-                {isEditing ? (
-                  <>
-                    <Button onClick={handleSave} disabled={saveState !== 'idle'} className={saveState === 'success' ? 'bg-green-600 hover:bg-green-700' : ''}>
-                      {getSaveButtonContent()}
-                    </Button>
+             {isEditing && (
+                <div className="flex justify-end gap-2 border-t pt-4">
                     <Button variant="ghost" onClick={() => { setIsEditing(false); setDisplayName(user?.displayName || 'Anonymous User')}} disabled={saveState !== 'idle'}>
                         <X className="mr-2 h-4 w-4" />
                         Cancel
                     </Button>
-                  </>
-                ) : (
-                  <Button variant="outline" onClick={() => setIsEditing(true)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Profile
-                  </Button>
-                )}
-              </div>
+                    <Button onClick={handleSave} disabled={saveState !== 'idle'} className={saveState === 'success' ? 'bg-green-600 hover:bg-green-700' : ''}>
+                      {getSaveButtonContent()}
+                    </Button>
+                </div>
+            )}
               <div className="border-t pt-4 space-y-4">
                 <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium text-muted-foreground">User ID</p>
