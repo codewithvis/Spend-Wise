@@ -28,7 +28,7 @@ import { useAuth, useUser } from '@/firebase';
 import { useEffect } from 'react';
 import { Skeleton } from '../ui/skeleton';
 import { SpendWiseProvider } from '@/contexts/spendwise-context';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import type { User } from 'firebase/auth';
 
 const menuItems = [
@@ -96,14 +96,16 @@ function AppLayout({
           <SidebarSeparator />
           <div className="flex items-center gap-2 p-2">
             <Avatar className="h-8 w-8">
+              {user?.photoURL && <AvatarImage src={user.photoURL} alt={user.displayName || user.email || 'User avatar'} />}
               <AvatarFallback>
                 <UserIcon className="h-4 w-4" />
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col text-sm overflow-hidden">
               <span className="font-medium text-sidebar-foreground truncate">
-                {user?.email || 'Anonymous User'}
+                {user?.displayName || user?.email || 'Anonymous User'}
               </span>
+               {user?.displayName && user.email && <span className="text-xs text-sidebar-foreground/70 truncate">{user.email}</span>}
             </div>
           </div>
           <SidebarSeparator />
@@ -122,11 +124,11 @@ function AppLayout({
           className="min-h-screen bg-background"
           style={{
             backgroundImage:
-              "url('https://picsum.photos/seed/beams/1920/1080')",
+              "url('https://picsum.photos/seed/plus/1920/1080')",
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
-          data-ai-hint="beams abstract"
+          data-ai-hint="plus abstract"
         >
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <SidebarTrigger className="sm:hidden" />
