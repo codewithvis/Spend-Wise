@@ -84,7 +84,7 @@ body {
   }
   body {
     @apply bg-transparent text-foreground;
-    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1533130061792-64b345e7e835?q=80&w=1932&auto=format&fit=crop);
+    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=1911&auto=format&fit=crop);
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
