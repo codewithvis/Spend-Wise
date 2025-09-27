@@ -90,4 +90,8 @@ body {
     background-position: center;
     background-attachment: fixed;
   }
+
+  .dark body {
+    background-color: transparent;
+  }
 }
