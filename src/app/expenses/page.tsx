@@ -6,15 +6,16 @@ import { ExpensesDataTable } from '@/components/expenses/expenses-data-table';
 import { Button } from '@/components/ui/button';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { FileDown, ArrowUpCircle, ArrowDownCircle, Scale } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { formatCurrency } from '@/lib/utils';
 import type { Expense } from '@/lib/types';
 import { WithId } from '@/firebase';
 import { ImportExpensesButton } from '@/components/expenses/import-expenses-button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/utils';
 
-const handleExport = (expenses: WithId<Expense>[]) => {
+const handleExport = async (expenses: WithId<Expense>[]) => {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+  
   const doc = new jsPDF();
   doc.text("SpendWise Expenses Report", 14, 16);
   doc.setFontSize(10);
@@ -28,7 +29,7 @@ const handleExport = (expenses: WithId<Expense>[]) => {
       formatCurrency(expense.amount)
   ]);
   
-  doc.autoTable({
+  autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 30,

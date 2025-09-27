@@ -6,14 +6,15 @@ import { PlansDataTable } from '@/components/plans/plans-data-table';
 import { Button } from '@/components/ui/button';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { FileDown } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { formatCurrency } from '@/lib/utils';
 import type { FuturePlan } from '@/lib/types';
 import { WithId } from '@/firebase';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
-const handleExport = (plans: WithId<FuturePlan>[]) => {
+const handleExport = async (plans: WithId<FuturePlan>[]) => {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+  
   const doc = new jsPDF();
   doc.text("SpendWise Future Plans Report", 14, 16);
   doc.setFontSize(10);
@@ -27,7 +28,7 @@ const handleExport = (plans: WithId<FuturePlan>[]) => {
       formatCurrency(plan.amount)
   ]);
   
-  doc.autoTable({
+  autoTable(doc, {
       head: [tableColumn],
       body: tableRows,
       startY: 30,

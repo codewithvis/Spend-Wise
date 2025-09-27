@@ -5,14 +5,15 @@ import { BudgetManager } from '@/components/budgets/budget-manager';
 import { Button } from '@/components/ui/button';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { FileDown } from 'lucide-react';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import { formatCurrency } from '@/lib/utils';
 import type { Budget, Expense } from '@/lib/types';
 import { WithId } from '@/firebase';
+import { formatCurrency } from '@/lib/utils';
 
 
-const handleExport = (budgets: WithId<Budget>[], expenses: WithId<Expense>[]) => {
+const handleExport = async (budgets: WithId<Budget>[], expenses: WithId<Expense>[]) => {
+  const { default: jsPDF } = await import('jspdf');
+  const { default: autoTable } = await import('jspdf-autotable');
+
   const doc = new jsPDF();
   doc.text("SpendWise Budgets Report", 14, 16);
   doc.setFontSize(10);
@@ -40,7 +41,7 @@ const handleExport = (budgets: WithId<Budget>[], expenses: WithId<Expense>[]) =>
         formatCurrency(remaining)
     ];
 
-    doc.autoTable({
+    autoTable(doc, {
         head: [summaryColumn],
         body: [summaryRow],
         startY: startY,
@@ -65,7 +66,7 @@ const handleExport = (budgets: WithId<Budget>[], expenses: WithId<Expense>[]) =>
             formatCurrency(expense.amount)
         ]);
         
-        doc.autoTable({
+        autoTable(doc, {
             head: [expenseTableColumn],
             body: expenseTableRows,
             startY: startY,
