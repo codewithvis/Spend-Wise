@@ -10,7 +10,6 @@ import { CATEGORIES, CATEGORY_ICONS } from '@/lib/constants';
 import type { Budget, Category } from '@/lib/types';
 import { formatCurrency } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import type { WithId } from '@/firebase';
 
 export function BudgetManager() {
   const { budgets, setBudgets, getSpentForCategory } = useSpendWise();
@@ -62,22 +61,24 @@ export function BudgetManager() {
 
           return (
             <div key={category} className="space-y-2">
-              <div className="flex items-center gap-4">
-                <Icon className="h-5 w-5 text-muted-foreground" />
-                <span className="font-medium flex-1">{category}</span>
-                <div className="w-32">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2 min-w-[120px]">
+                  <Icon className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">{category}</span>
+                </div>
+                <div className="flex-1 flex items-center gap-2">
                    <Input
                     type="number"
                     placeholder="0.00"
                     value={budgetAmount || ''}
                     onChange={(e) => handleBudgetChange(category, e.target.value)}
-                    className="text-right"
+                    className="text-right max-w-[120px] ml-auto"
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-4 pl-9">
+              <div className="flex items-center gap-4 pl-7">
                   <Progress value={Math.min(progress, 100)} className="flex-1 h-2" />
-                  <div className="text-xs text-muted-foreground w-32 text-right">
+                  <div className="text-xs text-muted-foreground min-w-[120px] text-right">
                     {formatCurrency(spentAmount)} / {formatCurrency(budgetAmount)}
                   </div>
               </div>
