@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -69,7 +70,7 @@ function AppLayout({
 
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar collapsible="icon">
         <SidebarHeader>
           <Logo />
         </SidebarHeader>
