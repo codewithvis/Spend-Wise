@@ -19,6 +19,7 @@ interface SpendWiseContextType {
   editExpense: (expense: WithId<Expense>) => void;
   deleteExpense: (id: string) => void;
   setBudgets: (budgets: Omit<Budget, 'userId'>[]) => void;
+  updateBudget: (budget: Omit<Budget, 'userId'>) => void;
   getBudgetForCategory: (category: Category) => number;
   getSpentForCategory: (category: Category) => number;
   addFuturePlan: (plan: Omit<FuturePlan, 'id' | 'userId'>) => void;
@@ -76,6 +77,12 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     const docRef = doc(firestore, 'users', user.uid, 'expenses', id);
     deleteDocumentNonBlocking(docRef);
   }
+  
+  const updateBudget = (budget: Omit<Budget, 'userId'>) => {
+    if (!user) return;
+    const docRef = doc(firestore, 'users', user.uid, 'budgets', budget.category);
+    setDocumentNonBlocking(docRef, { ...budget, userId: user.uid }, { merge: true });
+  };
 
   const setBudgets = (newBudgets: Omit<Budget, 'userId'>[]) => {
     if (!user) return;
@@ -118,12 +125,17 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     const now = new Date();
     const budget = budgets?.find(b => b.category === category);
 
-    // If a 'spent' amount is manually set on the budget, use it.
+    // If spendingHistory exists, use it to calculate spent amount
+    if (budget?.spendingHistory && budget.spendingHistory.length > 0) {
+      return budget.spendingHistory.reduce((sum, entry) => sum + entry.amount, 0);
+    }
+
+    // Fallback for older data or if history is empty, use 'spent' field
     if (budget && typeof budget.spent === 'number') {
       return budget.spent;
     }
     
-    // Otherwise, calculate from expenses.
+    // Otherwise, calculate from expenses (original behavior)
     return expenses
       ?.filter(e => {
         const expenseDate = new Date(e.date);
@@ -142,6 +154,7 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     editExpense,
     deleteExpense,
     setBudgets,
+    updateBudget,
     getBudgetForCategory,
     getSpentForCategory,
     addFuturePlan,

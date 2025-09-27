@@ -83,6 +83,26 @@
         "spent": {
           "type": "number",
           "description": "The amount spent for this budget period."
+        },
+        "spendingHistory": {
+          "type": "array",
+          "description": "A log of manual spending entries.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "amount": {
+                "type": "number"
+              },
+              "date": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": ["id", "amount", "date"]
+          }
         }
       },
       "required": [
