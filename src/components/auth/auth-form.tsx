@@ -1,6 +1,6 @@
 'use client';
 
-import { useState }from 'react';
+import { useState, useEffect }from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -16,32 +16,47 @@ import {
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/firebase';
-import { initiateEmailSignIn, initiateEmailSignUp, initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { initiateEmailSignUp, initiateEmailSignIn, initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
-const formSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email.' }),
   password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+  name: z.string().optional(),
 });
 
-type UserFormValue = z.infer<typeof formSchema>;
+const signupSchema = z.object({
+    email: z.string().email({ message: 'Please enter a valid email.' }),
+    password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
+    name: z.string().min(2, { message: 'Name must be at least 2 characters.'}),
+});
+
 
 export function AuthForm() {
   const [isLogin, setIsLogin] = useState(true);
   const auth = useAuth();
-
-  const form = useForm<UserFormValue>({
-    resolver: zodResolver(formSchema),
+  
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(isLogin ? loginSchema : signupSchema),
     defaultValues: {
       email: '',
       password: '',
+      name: '',
     },
   });
 
-  const onSubmit = (data: UserFormValue) => {
+  useEffect(() => {
+    form.reset({
+        email: '',
+        password: '',
+        name: '',
+    });
+  }, [isLogin, form]);
+
+  const onSubmit = (data: z.infer<typeof loginSchema>) => {
     if (isLogin) {
       initiateEmailSignIn(auth, data.email, data.password);
     } else {
-      initiateEmailSignUp(auth, data.email, data.password);
+      initiateEmailSignUp(auth, data.email, data.password, data.name);
     }
   };
   
@@ -60,6 +75,24 @@ export function AuthForm() {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {!isLogin && (
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Enter your name..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField
               control={form.control}
               name="email"
