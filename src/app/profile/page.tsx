@@ -43,7 +43,7 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
-    if (auth.currentUser && displayName.trim()) {
+    if (auth.currentUser && firestore && displayName.trim()) {
         setIsSaving(true);
         try {
             await updateProfile(auth.currentUser, { displayName: displayName.trim() });
