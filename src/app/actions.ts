@@ -4,6 +4,9 @@ import { categorizeExpense } from '@/ai/flows/categorize-expense';
 import type { CategorizeExpenseOutput } from '@/ai/flows/categorize-expense';
 import { extractExpensesFromText } from '@/ai/flows/extract-expenses';
 import type { ExtractExpensesOutput } from '@/ai/flows/extract-expenses';
+import { addExpense as addExpenseFlow } from '@/ai/flows/add-expense-flow';
+import type { AddExpenseInput } from '@/ai/flows/add-expense-flow';
+
 import { Category, type Expense } from '@/lib/types';
 import { CATEGORIES } from '@/lib/constants';
 
@@ -55,6 +58,20 @@ export async function getExpensesFromText(text: string): Promise<{ data: Omit<Ex
         return { data: null, error: 'Failed to extract expenses due to a server error.' };
     }
 }
+
+export async function addExpense(expenseData: AddExpenseInput): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await addExpenseFlow(expenseData);
+    if (result.success) {
+      return { success: true };
+    }
+    return { success: false, error: result.error };
+  } catch (e) {
+    console.error(e);
+    return { success: false, error: 'Failed to add expense due to a server error.' };
+  }
+}
+
 
 // This is a new action required for pdf-parse to work on the server
 export async function parsePdf(fileBuffer: Buffer) {

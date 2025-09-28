@@ -34,8 +34,8 @@ import { CATEGORIES } from '@/lib/constants';
 import type { Expense } from '@/lib/types';
 import { useSpendWise } from '@/contexts/spendwise-context';
 import { useToast } from '@/hooks/use-toast';
-import { WithId } from '@/firebase';
-import { getCategorySuggestion } from '@/app/actions';
+import { WithId, useUser } from '@/firebase';
+import { getCategorySuggestion, addExpense as addExpenseAction } from '@/app/actions';
 import { useState } from 'react';
 import { Badge } from '../ui/badge';
 
@@ -60,7 +60,8 @@ interface ExpenseFormProps {
 }
 
 export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
-  const { addExpense, editExpense } = useSpendWise();
+  const { user } = useUser();
+  const { editExpense } = useSpendWise();
   const { toast } = useToast();
   const isEditMode = !!expense;
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -105,6 +106,15 @@ export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
   }
 
   async function onSubmit(values: ExpenseFormValues) {
+    if (!user) {
+        toast({
+            variant: 'destructive',
+            title: 'Authentication Error',
+            description: 'You must be logged in to perform this action.',
+        });
+        return;
+    }
+    
     if (isEditMode) {
       editExpense({ ...values, date: values.date.toISOString(), id: expense.id, userId: expense.userId });
       toast({
@@ -112,11 +122,24 @@ export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
         description: `Successfully updated "${values.description}".`,
       });
     } else {
-      addExpense({ ...values, date: values.date.toISOString() });
-      toast({
-        title: 'Expense Added',
-        description: `Successfully added "${values.description}".`,
-      });
+       const expenseData = {
+        ...values,
+        userId: user.uid,
+        date: values.date.toISOString(),
+      };
+      const result = await addExpenseAction(expenseData);
+      if (result.success) {
+        toast({
+          title: 'Expense Added',
+          description: `Successfully added "${values.description}".`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Failed to Add Expense',
+          description: result.error || 'An unknown error occurred.',
+        });
+      }
     }
     onFinished();
   }
@@ -224,7 +247,8 @@ export function ExpenseForm({ onFinished, expense }: ExpenseFormProps) {
           )}
         />
         <div className="flex justify-end">
-          <Button type="submit">
+          <Button type="submit" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {isEditMode ? 'Save changes' : 'Save expense'}
           </Button>
         </div>

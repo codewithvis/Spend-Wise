@@ -15,7 +15,6 @@ interface SpendWiseContextType {
   expenses: WithId<Expense>[];
   budgets: WithId<Budget>[];
   futurePlans: WithId<FuturePlan>[];
-  addExpense: (expense: Omit<Expense, 'id' | 'userId'>) => void;
   editExpense: (expense: WithId<Expense>) => void;
   deleteExpense: (id: string) => void;
   setBudgets: (budgets: Omit<Budget, 'userId'>[]) => void;
@@ -58,12 +57,6 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     if (!futurePlans) return [];
     return [...futurePlans].sort((a, b) => new Date(b.targetDate).getTime() - new Date(a.targetDate).getTime());
   }, [futurePlans]);
-
-  const addExpense = (expense: Omit<Expense, 'id' | 'userId'>) => {
-    if (!user || !expensesQuery) return;
-    const newExpense = { ...expense, userId: user.uid };
-    addDocumentNonBlocking(expensesQuery, newExpense);
-  };
 
   const editExpense = (updatedExpense: WithId<Expense>) => {
     if (!user) return;
@@ -150,7 +143,6 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     expenses: sortedExpenses,
     budgets: budgets || [],
     futurePlans: sortedFuturePlans,
-    addExpense,
     editExpense,
     deleteExpense,
     setBudgets,
