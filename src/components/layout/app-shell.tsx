@@ -30,6 +30,7 @@ import { useEffect } from 'react';
 import { Skeleton } from '../ui/skeleton';
 import { SpendWiseProvider } from '@/contexts/spendwise-context';
 import type { User } from 'firebase/auth';
+import type { InitialData } from '@/lib/get-server-spendwise-data';
 
 const menuItems = [
   {
@@ -57,9 +58,11 @@ const menuItems = [
 function AppLayout({
   children,
   user,
+  initialData,
 }: {
   children: React.ReactNode;
   user: User | null;
+  initialData: InitialData;
 }) {
   const pathname = usePathname();
   const auth = useAuth();
@@ -123,9 +126,11 @@ function AppLayout({
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <SidebarTrigger className="sm:hidden" />
           </header>
-          <main>
+          <main className="p-4 md:p-8">
             <div className="mx-auto max-w-screen-2xl rounded-lg border bg-background/80 backdrop-blur-sm">
-              {children}
+              <SpendWiseProvider initialData={initialData}>
+                {children}
+              </SpendWiseProvider>
             </div>
           </main>
         </div>
@@ -134,7 +139,7 @@ function AppLayout({
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, initialData }: { children: React.ReactNode, initialData: InitialData }) {
   const pathname = usePathname();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
@@ -172,9 +177,5 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  return (
-    <SpendWiseProvider>
-      <AppLayout user={user}>{children}</AppLayout>
-    </SpendWiseProvider>
-  );
+  return <AppLayout user={user} initialData={initialData}>{children}</AppLayout>;
 }

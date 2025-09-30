@@ -1,7 +1,7 @@
 'use client';
 
 import type { Expense, Budget, Category, FuturePlan } from '@/lib/types';
-import { createContext, useContext, ReactNode, useMemo, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useMemo, useCallback, useState } from 'react';
 import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import {
@@ -10,6 +10,7 @@ import {
   deleteDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import type { WithId } from '@/firebase/firestore/use-collection';
+import type { InitialData } from '@/lib/get-server-spendwise-data';
 
 interface SpendWiseContextType {
   expenses: WithId<Expense>[];
@@ -29,24 +30,36 @@ interface SpendWiseContextType {
 
 const SpendWiseContext = createContext<SpendWiseContextType | undefined>(undefined);
 
-export function SpendWiseProvider({ children }: { children: ReactNode }) {
+export function SpendWiseProvider({ children, initialData }: { children: ReactNode; initialData: InitialData }) {
   const { user } = useUser();
   const firestore = useFirestore();
+  const [clientData, setClientData] = useState<InitialData | null>(null);
 
   const expensesQuery = useMemoFirebase(() => 
     user ? collection(firestore, 'users', user.uid, 'expenses') : null
   , [firestore, user]);
-  const { data: expenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery);
+  const { data: liveExpenses, isLoading: expensesLoading } = useCollection<Expense>(expensesQuery, {
+      disabled: !!clientData, // Disable live fetch if we have client data already
+  });
 
   const budgetsQuery = useMemoFirebase(() =>
     user ? collection(firestore, 'users', user.uid, 'budgets') : null
   , [firestore, user]);
-  const { data: budgets, isLoading: budgetsLoading } = useCollection<Budget>(budgetsQuery);
+  const { data: liveBudgets, isLoading: budgetsLoading } = useCollection<Budget>(budgetsQuery, {
+      disabled: !!clientData,
+  });
 
   const futurePlansQuery = useMemoFirebase(() =>
     user ? collection(firestore, 'users', user.uid, 'futurePlans') : null
   , [firestore, user]);
-  const { data: futurePlans, isLoading: futurePlansLoading } = useCollection<FuturePlan>(futurePlansQuery);
+  const { data: liveFuturePlans, isLoading: futurePlansLoading } = useCollection<FuturePlan>(futurePlansQuery, {
+      disabled: !!clientData,
+  });
+
+  // Combine initial server data with live client-side updates
+  const expenses = useMemo(() => liveExpenses ?? clientData?.expenses ?? initialData.expenses, [liveExpenses, clientData, initialData.expenses]);
+  const budgets = useMemo(() => liveBudgets ?? clientData?.budgets ?? initialData.budgets, [liveBudgets, clientData, initialData.budgets]);
+  const futurePlans = useMemo(() => liveFuturePlans ?? clientData?.futurePlans ?? initialData.futurePlans, [liveFuturePlans, clientData, initialData.futurePlans]);
 
   const sortedExpenses = useMemo(() => {
     if (!expenses) return [];
@@ -81,13 +94,11 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     const batch = writeBatch(firestore);
     newBudgets.forEach(budget => {
-      // Use category as the ID for budgets to ensure one budget per category
       const docRef = doc(firestore, 'users', user.uid, 'budgets', budget.category);
       batch.set(docRef, { ...budget, userId: user.uid }, { merge: true });
     });
     batch.commit().catch(error => {
       console.error("Error writing batch for budgets: ", error);
-      // Optionally, handle error with a toast or other notification
     });
   };
   
@@ -118,17 +129,14 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     const now = new Date();
     const budget = budgets?.find(b => b.category === category);
 
-    // If spendingHistory exists, use it to calculate spent amount
     if (budget?.spendingHistory && budget.spendingHistory.length > 0) {
       return budget.spendingHistory.reduce((sum, entry) => sum + entry.amount, 0);
     }
 
-    // Fallback for older data or if history is empty, use 'spent' field
     if (budget && typeof budget.spent === 'number') {
       return budget.spent;
     }
     
-    // Otherwise, calculate from expenses (original behavior)
     return expenses
       ?.filter(e => {
         const expenseDate = new Date(e.date);
@@ -137,7 +145,7 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
       .reduce((sum, e) => sum + e.amount, 0) || 0;
   }, [expenses, budgets]);
 
-  const isLoading = expensesLoading || budgetsLoading || futurePlansLoading;
+  const isLoading = (clientData === null) && (expensesLoading || budgetsLoading || futurePlansLoading);
 
   const value = {
     expenses: sortedExpenses,
