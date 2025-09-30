@@ -8,6 +8,7 @@ import type { Budget, Expense } from '@/lib/types';
 import { WithId } from '@/firebase';
 import { formatCurrency } from '@/lib/utils';
 import { BudgetManager } from '@/components/budgets/budget-manager';
+import { ImportBudgetsButton } from './import-budgets-button';
 
 const handleExport = async (budgets: WithId<Budget>[], expenses: WithId<Expense>[]) => {
   const { default: jsPDF } = await import('jspdf');
@@ -91,6 +92,7 @@ export function BudgetsClient() {
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between space-y-2 md:space-y-0 md:space-x-2">
         <h2 className="text-3xl font-bold tracking-tight">Budgets</h2>
         <div className="flex items-center space-x-2">
+          <ImportBudgetsButton />
           <Button variant="outline" onClick={() => handleExport(budgets, expenses)}>
             <FileDown className="mr-2 h-4 w-4" />
             Export
