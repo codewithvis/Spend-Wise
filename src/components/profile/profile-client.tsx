@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useUser } from '@/firebase';
@@ -132,7 +133,7 @@ export function ProfileClient() {
   };
 
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8">
       <h2 className="text-3xl font-bold tracking-tight">Profile</h2>
       <div className="flex justify-center">
         <Card className="w-full max-w-lg">

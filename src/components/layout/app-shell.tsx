@@ -123,7 +123,7 @@ function AppLayout({
           <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/95 px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
             <SidebarTrigger className="sm:hidden" />
           </header>
-          <main className="p-4 sm:p-6 lg:p-8">
+          <main>
             <div className="mx-auto max-w-screen-2xl rounded-lg border bg-background/80 backdrop-blur-sm">
               {children}
             </div>
