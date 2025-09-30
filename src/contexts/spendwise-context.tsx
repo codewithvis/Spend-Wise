@@ -17,7 +17,7 @@ interface SpendWiseContextType {
   futurePlans: WithId<FuturePlan>[];
   editExpense: (expense: WithId<Expense>) => void;
   deleteExpense: (id: string) => void;
-  setBudgets: (budgets: Omit<Budget, 'userId'>[]) => void;
+  setBudgets: (budgets: Omit<Budget, 'userId' | 'spent' | 'spendingHistory'>[]) => void;
   updateBudget: (budget: Omit<Budget, 'userId'>) => void;
   getBudgetForCategory: (category: Category) => number;
   getSpentForCategory: (category: Category) => number;
@@ -77,7 +77,7 @@ export function SpendWiseProvider({ children }: { children: ReactNode }) {
     setDocumentNonBlocking(docRef, { ...budget, userId: user.uid }, { merge: true });
   };
 
-  const setBudgets = (newBudgets: Omit<Budget, 'userId'>[]) => {
+  const setBudgets = (newBudgets: Omit<Budget, 'userId' | 'spent' | 'spendingHistory'>[]) => {
     if (!user) return;
     const batch = writeBatch(firestore);
     newBudgets.forEach(budget => {

@@ -8,62 +8,61 @@ import { useSpendWise } from '@/contexts/spendwise-context';
 import { useToast } from '@/hooks/use-toast';
 import { CATEGORIES } from '@/lib/constants';
 import type { Expense } from '@/lib/types';
-import { getExpensesFromText, parsePdf } from '@/app/actions';
-
-// Expected CSV headers: Date,Description,Amount,Category
-interface CsvData {
-    Date: string;
-    Description: string;
-    Amount: string;
-    Category: string;
-}
+import { getExpensesFromText, parsePdf, addExpense as addExpenseAction } from '@/app/actions';
+import { useUser } from '@/firebase';
 
 export function ImportExpensesButton({ variant = 'outline', ...props }: ButtonProps) {
-  const { addExpense } = useSpendWise();
+  const { user } = useUser();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isImporting, setIsImporting] = useState(false);
 
-  const processExpenses = (expenses: Omit<Expense, 'id' | 'userId'>[]) => {
+  const processExpenses = async (expenses: Omit<Expense, 'id' | 'userId'>[]) => {
       let importedCount = 0;
       let errorCount = 0;
 
-      expenses.forEach((expense, index) => {
+      if (!user) {
+        toast({ variant: 'destructive', title: 'Not signed in', description: 'You must be signed in to import expenses.'})
+        return { importedCount, errorCount };
+      }
+
+      for (const expense of expenses) {
           const { date, description, amount, category } = expense;
           
           if (!date || !description || !amount || !category) {
-              console.warn(`Skipping expense index ${index}: Missing required fields.`, expense);
+              console.warn(`Skipping expense: Missing required fields.`, expense);
               errorCount++;
-              return;
+              continue;
           }
 
           if (typeof amount !== 'number' || isNaN(amount)) {
-              console.warn(`Skipping expense index ${index}: Invalid amount.`, expense);
+              console.warn(`Skipping expense: Invalid amount.`, expense);
               errorCount++;
-              return;
+              continue;
           }
 
           const parsedDate = new Date(date);
           if (isNaN(parsedDate.getTime())) {
-              console.warn(`Skipping expense index ${index}: Invalid date.`, expense);
+              console.warn(`Skipping expense: Invalid date.`, expense);
               errorCount++;
-              return;
+              continue;
           }
 
           if (!CATEGORIES.includes(category as any)) {
-              console.warn(`Skipping expense index ${index}: Invalid category.`, expense);
+              console.warn(`Skipping expense: Invalid category.`, expense);
               errorCount++;
-              return;
+              continue;
           }
 
-          addExpense({
+          await addExpenseAction({
+              userId: user.uid,
               date: parsedDate.toISOString(),
               description: description,
               amount: amount,
               category: category,
           });
           importedCount++;
-      });
+      };
       
       return { importedCount, errorCount };
   }
@@ -82,7 +81,7 @@ export function ImportExpensesButton({ variant = 'outline', ...props }: ButtonPr
         return;
     }
 
-    const { importedCount, errorCount } = processExpenses(data);
+    const { importedCount, errorCount } = await processExpenses(data);
 
     toast({
         title: "AI Import Complete",
@@ -99,36 +98,7 @@ export function ImportExpensesButton({ variant = 'outline', ...props }: ButtonPr
     
     setIsImporting(true);
 
-    if (file.type === 'text/csv') {
-        const Papa = (await import('papaparse')).default;
-        Papa.parse<CsvData>(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-                const expensesToProcess = results.data.map(row => ({
-                    date: row.Date,
-                    description: row.Description,
-                    amount: parseFloat(row.Amount),
-                    category: row.Category,
-                }));
-                const { importedCount, errorCount } = processExpenses(expensesToProcess as any);
-
-                toast({
-                    title: "CSV Import Complete",
-                    description: `${importedCount} expenses imported. ${errorCount > 0 ? `${errorCount} rows had errors.` : ''}`,
-                });
-                setIsImporting(false);
-            },
-            error: (error) => {
-                toast({
-                    variant: "destructive",
-                    title: "Import Failed",
-                    description: `Error parsing CSV: ${error.message}`,
-                });
-                setIsImporting(false);
-            }
-        });
-    } else if (file.type === 'text/plain') {
+    if (file.type === 'text/plain') {
         const text = await file.text();
         await handleAiImport(text);
     } else if (file.type === 'application/pdf') {
@@ -150,7 +120,7 @@ export function ImportExpensesButton({ variant = 'outline', ...props }: ButtonPr
         toast({
             variant: "destructive",
             title: "Unsupported File Type",
-            description: "Please upload a .csv, .txt, or .pdf file.",
+            description: "Please upload a .txt or .pdf file.",
         });
         setIsImporting(false);
     }
@@ -173,7 +143,7 @@ export function ImportExpensesButton({ variant = 'outline', ...props }: ButtonPr
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".csv,.txt,.pdf"
+        accept=".txt,.pdf"
         disabled={isImporting}
       />
       <Button variant={variant} onClick={handleButtonClick} {...props} disabled={isImporting}>

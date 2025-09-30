@@ -6,8 +6,11 @@ import { extractExpensesFromText } from '@/ai/flows/extract-expenses';
 import type { ExtractExpensesOutput } from '@/ai/flows/extract-expenses';
 import { addExpense as addExpenseFlow } from '@/ai/flows/add-expense-flow';
 import type { AddExpenseInput } from '@/ai/flows/add-expense-flow';
+import { extractBudgetsFromText } from '@/ai/flows/extract-budgets';
+import type { ExtractBudgetsOutput } from '@/ai/flows/extract-budgets';
 
-import { Category, type Expense } from '@/lib/types';
+
+import { Category, type Expense, type Budget } from '@/lib/types';
 import { CATEGORIES } from '@/lib/constants';
 
 type SuggestionResult = {
@@ -56,6 +59,20 @@ export async function getExpensesFromText(text: string): Promise<{ data: Omit<Ex
     } catch (e) {
         console.error(e);
         return { data: null, error: 'Failed to extract expenses due to a server error.' };
+    }
+}
+
+export async function getBudgetsFromText(text: string): Promise<{ data: Omit<Budget, 'userId' | 'spent' | 'spendingHistory'>[] | null; error: string | null }> {
+    if (!text?.trim()) {
+        return { data: null, error: 'Input text cannot be empty.' };
+    }
+    try {
+        const result: ExtractBudgetsOutput = await extractBudgetsFromText({ text });
+        return { data: result.budgets, error: null };
+
+    } catch (e) {
+        console.error(e);
+        return { data: null, error: 'Failed to extract budgets due to a server error.' };
     }
 }
 

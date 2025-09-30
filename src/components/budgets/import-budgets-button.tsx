@@ -8,12 +8,7 @@ import { useSpendWise } from '@/contexts/spendwise-context';
 import { useToast } from '@/hooks/use-toast';
 import { CATEGORIES } from '@/lib/constants';
 import type { Budget, Category } from '@/lib/types';
-
-// Expected CSV headers: Category,Amount
-interface CsvData {
-    Category: string;
-    Amount: string;
-}
+import { getBudgetsFromText, parsePdf } from '@/app/actions';
 
 export function ImportBudgetsButton({ variant = 'outline', ...props }: ButtonProps) {
   const { setBudgets } = useSpendWise();
@@ -60,6 +55,29 @@ export function ImportBudgetsButton({ variant = 'outline', ...props }: ButtonPro
       
       return { importedCount, errorCount };
   }
+  
+  const handleAiImport = async (text: string) => {
+    setIsImporting(true);
+    const { data, error } = await getBudgetsFromText(text);
+
+    if (error || !data) {
+        toast({
+            variant: "destructive",
+            title: "AI Import Failed",
+            description: error || "The AI could not extract any budgets from the file.",
+        });
+        setIsImporting(false);
+        return;
+    }
+
+    const { importedCount, errorCount } = processBudgets(data);
+
+    toast({
+        title: "AI Import Complete",
+        description: `${importedCount} budgets imported. ${errorCount > 0 ? `${errorCount} were skipped.` : ''}`,
+    });
+    setIsImporting(false);
+  }
 
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,38 +88,29 @@ export function ImportBudgetsButton({ variant = 'outline', ...props }: ButtonPro
     
     setIsImporting(true);
 
-    if (file.type === 'text/csv') {
-        const Papa = (await import('papaparse')).default;
-        Papa.parse<CsvData>(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-                const budgetsToProcess = results.data.map(row => ({
-                    category: row.Category,
-                    amount: parseFloat(row.Amount),
-                }));
-                const { importedCount, errorCount } = processBudgets(budgetsToProcess as any);
-
-                toast({
-                    title: "CSV Import Complete",
-                    description: `${importedCount} budgets imported. ${errorCount > 0 ? `${errorCount} rows had errors.` : ''}`,
-                });
-                setIsImporting(false);
-            },
-            error: (error) => {
-                toast({
-                    variant: "destructive",
-                    title: "Import Failed",
-                    description: `Error parsing CSV: ${error.message}`,
-                });
-                setIsImporting(false);
-            }
-        });
+    if (file.type === 'text/plain') {
+        const text = await file.text();
+        await handleAiImport(text);
+    } else if (file.type === 'application/pdf') {
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const text = await parsePdf(buffer);
+            await handleAiImport(text);
+        } catch (error) {
+            console.error("PDF parsing error", error);
+            toast({
+                variant: 'destructive',
+                title: 'PDF Import Failed',
+                description: 'Could not extract text from the PDF file.',
+            });
+            setIsImporting(false);
+        }
     } else {
         toast({
             variant: "destructive",
             title: "Unsupported File Type",
-            description: "Please upload a .csv file.",
+            description: "Please upload a .txt or .pdf file.",
         });
         setIsImporting(false);
     }
@@ -124,7 +133,7 @@ export function ImportBudgetsButton({ variant = 'outline', ...props }: ButtonPro
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept=".csv"
+        accept=".txt,.pdf"
         disabled={isImporting}
       />
       <Button variant={variant} onClick={handleButtonClick} {...props} disabled={isImporting}>
